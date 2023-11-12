@@ -39,3 +39,4 @@ SuperNote est un plugin polyvalent de gestion de notes conçu pour offrir une ex
 
 ## test github action
 test numero 1 
+test 2
