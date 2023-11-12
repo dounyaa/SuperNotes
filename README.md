@@ -36,5 +36,3 @@ SuperNote est un plugin polyvalent de gestion de notes conçu pour offrir une ex
 - Dounya Alaoui
 - Aya LAKEHAL
 - Rayan Awasil
-
-## test github actionbvf vf 
