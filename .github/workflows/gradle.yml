@@ -25,13 +25,6 @@ jobs:
         java-version: '21'
         distribution: 'adopt'
 
-    - name: Download Gradle Wrapper
-      run: |
-        wget https://services.gradle.org/distributions/gradle-8.4-bin.zip
-        unzip -d gradle gradle-8.4-bin.zip
-        mv gradle/gradle-8.4/* .
-        chmod +x gradlew
-
     - name: Display Gradle version
       run: ./gradlew --version
       
