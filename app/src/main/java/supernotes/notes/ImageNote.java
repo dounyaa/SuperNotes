@@ -1,15 +1,9 @@
 package supernotes.notes;
 
-
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.awt.*;
-import java.util.ArrayList;
-import java.util.List;
-
 
 public class ImageNote implements Note<byte[]> {
-    private int id;
     private String title;
     private String type;
     private byte[] content;
@@ -18,7 +12,6 @@ public class ImageNote implements Note<byte[]> {
     private String parentPageId;
     private String time;
     private String path;
-
 
     public ImageNote(String title, String type, byte[] content, String tag, String pageId, String parentPageId, String time, String path) {
         this.title = title;
@@ -45,9 +38,6 @@ public class ImageNote implements Note<byte[]> {
         this.time = dateTime.format(formatter);
     }
 
-
-    public ImageNote() {}
-
     public ImageNote(String title, byte[] content, String tag, String pageId, String parentPageId, String time) {
         this.title = title;
         this.content = content;
@@ -65,18 +55,6 @@ public class ImageNote implements Note<byte[]> {
         this.parentPageId = parentPageId;
         this.time = time;
         this.path = path;
-
-        // this.reminders = new ArrayList<>();
-
-    }
-
-    @Override 
-    public int getId() {
-        return this.id;
-    }
-    @Override
-    public void setId(int id) {
-        this.id = id;
     }
 
     @Override

@@ -96,25 +96,5 @@ public class FileManager implements FileHandler {
             e.printStackTrace();
         }
     }
-
-    public void exportToText(String filePath) {
-    try {
-        FileWriter writer = new FileWriter(filePath);
-
-        DBManager dbManager = new SQLiteDBManager();
-        List<Note> notes = dbManager.getAllNotes();
-
-        for (Note note : notes) {
-            writer.write("Tag: " + note.getTag() + "\n");
-            writer.write("Content: " + note.getContent() + "\n\n");
-        }
-
-        writer.close();
-        System.out.println("Exportation des notes en texte brut terminée : " + filePath);
-    } catch (IOException e) {
-        System.out.println("Erreur lors de l'exportation en texte brut : " + e.getMessage());
-    }
-}
-
 }
 

@@ -1,12 +1,6 @@
 package supernotes.notes;
 
-import java.util.List;
-
-
 public interface Note<T> {
-    int getId();
-    void setId(int id);
-    
     String getTitle();
     void setTitle(String title); 
 
@@ -21,7 +15,6 @@ public interface Note<T> {
 
     
     String getParentPageId();
-
     void setParentPageId(String pageId);
 
 
@@ -30,4 +23,5 @@ public interface Note<T> {
 
     String getType();
 
+    String getPath();
 }

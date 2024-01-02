@@ -2,12 +2,8 @@ package supernotes.notes;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayList;
-import java.util.List;
-
 
 public class TextNote implements Note<String> {
-    private int id;
     private String title;
     private String type;
     private String content;
@@ -16,7 +12,6 @@ public class TextNote implements Note<String> {
     private String pageId;
     private String time;
 
-    
     public TextNote() {
     }
 
@@ -48,16 +43,6 @@ public class TextNote implements Note<String> {
         this.pageId = pageId;
         this.time = time;
         this.type = type;
-        // this.reminders = new ArrayList<>();
-    }
-
-    @Override 
-    public int getId() {
-        return this.id;
-    }
-    @Override
-    public void setId(int id) {
-        this.id = id;
     }
 
     @Override
