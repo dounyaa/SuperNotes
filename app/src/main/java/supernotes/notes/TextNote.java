@@ -81,6 +81,11 @@ public class TextNote implements Note<String> {
     }
 
     @Override
+    public void setTime(String time) {
+        this.time = time;
+    }
+
+    @Override
     public String getType() {
         return type;
     }

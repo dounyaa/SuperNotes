@@ -94,6 +94,9 @@ public class CommandLineInterface {
         Pattern linkNotesPatternWithANDAndAfter = Pattern.compile("sn link --id \"([^\"]+)\" --tag \"([^\"]+)\" and \"([^\"]+)\" --name \"([^\"]+)\" --after \"([^\"]+)\"");
         Matcher linkNotesMatcherWithANDAndAfter = linkNotesPatternWithANDAndAfter.matcher(command);
 
+        Pattern showAllLinksByNamePattern = Pattern.compile("sn show --link\\s+\"([^\"]+)\"");
+        Matcher showAllLinksByNameMatcher = showAllLinksByNamePattern.matcher(command);
+
         if (addNoteMatcher.matches()) {
             String noteContent = addNoteMatcher.group(1);
             String noteTag = addNoteMatcher.group(2);
@@ -369,6 +372,12 @@ public class CommandLineInterface {
                 System.out.println("Erreur!");
             } else {
                 System.out.println("Notes liées avec succès. Link ID: " + linkId);
+            }
+        } else if (showAllLinksByNameMatcher.matches()) {
+            String linkName = showAllLinksByNameMatcher.group(1);
+            boolean linkExistenceCheck = noteManager.getAllLinksByName(linkName);
+            if (!linkExistenceCheck) {
+                System.out.println("No Links found with Link Name : " + linkName);
             }
         } else if (!command.equals("exit")) {
             System.out.println("Commande invalide. Tapez 'sn --help' pour afficher l'aide.");

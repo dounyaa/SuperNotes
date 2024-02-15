@@ -85,6 +85,11 @@ public class ImageNote implements Note<byte[]> {
     }
 
     @Override
+    public void setTime(String time) {
+        this.time = time;
+    }
+
+    @Override
     public String getType() {
         return type;
     }

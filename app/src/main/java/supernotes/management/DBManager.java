@@ -53,4 +53,6 @@ public interface DBManager {
     int linkNotesWithANDBeforeDate(int noteId, String[] tags, String linkName, String date);
 
     int linkNotesWithANDAfterDate(int noteId, String[] tags, String linkName, String date);
+
+    boolean getAllLinksByName(String linkName);
 }

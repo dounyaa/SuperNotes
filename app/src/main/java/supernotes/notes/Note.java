@@ -18,5 +18,7 @@ public interface Note<T> {
 
     String getTime();
 
+    void setTime(String time);
+
     String getType();
 }

@@ -132,4 +132,9 @@ public class NoteManagerDataBase implements NoteManager {
         return dbManager.linkNotesWithANDAfterDate(noteId,tags,linkName,date);
     }
 
+    @Override
+    public boolean getAllLinksByName(String linkName) {
+        return dbManager.getAllLinksByName(linkName);
+    }
+
 }

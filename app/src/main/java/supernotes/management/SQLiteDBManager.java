@@ -6,6 +6,7 @@ import supernotes.notes.TextNote;
 
 import java.sql.*;
 import java.time.LocalDateTime;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -69,7 +70,7 @@ public class SQLiteDBManager implements DBManager {
 
     @Override
     public void createLinkNotesTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS LinkNotes (" + "id INTEGER PRIMARY KEY AUTOINCREMENT," + "linkname VARCHAR(255)," + "note1_id INTEGER," + "note2_id INTEGER," + "creation_date DATETIME DEFAULT CURRENT_TIMESTAMP ," + "FOREIGN KEY (note1_id) REFERENCES Notes(id)," + "FOREIGN KEY (note2_id) REFERENCES Notes(id)" + ")";
+        String sql = "CREATE TABLE IF NOT EXISTS LinkNotes (" + "id INTEGER PRIMARY KEY AUTOINCREMENT," + "linkname VARCHAR(255)," + "note1_id INTEGER," + "note2_id INTEGER," + "creation_date TEXT," + "FOREIGN KEY (note1_id) REFERENCES Notes(id)," + "FOREIGN KEY (note2_id) REFERENCES Notes(id)" + ")";
         try (Connection conn = getConnection(); Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
         } catch (SQLException e) {
@@ -297,10 +298,12 @@ public class SQLiteDBManager implements DBManager {
                 if (type.equals("text")) {
                     TextNote textNote = new TextNote(rs.getString("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
                     textNote.setId(noteId);
+                    textNote.setTime(rs.getString("time"));
                     result.add(textNote);
                 } else if (type.equals("image")) {
                     ImageNote imageNote = new ImageNote(rs.getString("path"), rs.getBytes("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
                     imageNote.setId(noteId);
+                    imageNote.setTime(rs.getString("time"));
                     result.add(imageNote);
                 }
             }
@@ -773,6 +776,62 @@ public class SQLiteDBManager implements DBManager {
 
         return linkId;
     }
+
+    @Override
+    public boolean getAllLinksByName(String linkName) {
+        createLinkNotesTable();
+        String sql = "SELECT * FROM LinkNotes WHERE linkname = ?";
+    
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+    
+            pstmt.setString(1, linkName.trim()); // Assurez-vous d'utiliser trim() ici
+            ResultSet rs = pstmt.executeQuery();
+    
+            boolean found = false;
+            if (!rs.next()) {
+                return false; // Aucun lien trouvé
+            }
+    
+            // Variables pour garder la trace des informations précédentes
+            int tempNoteId = -1; 
+            String tempDate = null;
+    
+            do {
+                int note1Id = rs.getInt("note1_id");
+                int note2Id = rs.getInt("note2_id");
+                String creationDate = rs.getString("creation_date"); // Retrieve creation date
+    
+                // Vérifiez si la date de création a changé
+                if (!creationDate.equals(tempDate)) {
+                    if (tempDate != null) {
+                        System.out.println(); // Ajouter une ligne vide entre les groupes de dates
+                    }
+                    System.out.println("Created on : " + creationDate);
+                    System.out.print("--------------------------------"); // La longueur de la ligne est fixe
+                    System.out.println();
+                    tempDate = creationDate;
+                }
+    
+                // Vérifiez si l'id de note a changé
+                if (note1Id != tempNoteId) {
+                    System.out.println("note id = " + note1Id + "  --->  id =" + note2Id);
+                    tempNoteId = note1Id;
+                } else {
+                    // Imprimer des espaces pour aligner les sorties
+                    System.out.println("             --->  id =" + note2Id);
+                }
+            } while (rs.next());
+    
+            found = true;
+            return found;
+        } catch (SQLException e) {
+            System.out.println("An error occurred: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return false; // Retourne false si une exception est levée
+    }
+    
 
 
     private List<Integer> findAssociatedNoteIdsAtDate(List<Integer> noteIds, String date) {
