@@ -1,8 +1,6 @@
 package supernotes.githubsync;
 
 import org.json.JSONObject;
-import supernotes.management.NoteManager;
-import supernotes.management.NoteManagerDataBase;
 import supernotes.notes.Note;
 import supernotes.notes.*;
 
@@ -62,7 +60,7 @@ public class GitHubRepositoryManager {
             String username = getUsername();
             asciiDocFileName = asciiDocFileName.endsWith(".adoc") ? asciiDocFileName : asciiDocFileName + ".adoc";
 
-            String owner = username; // Utilisez le nom d'utilisateur comme propriétaire du référentiel
+            String owner = username;
 
             // Vérifier si le fichier existe déjà
             if (fileExistsOnGitHub(owner, repo, asciiDocFileName)) {
@@ -86,7 +84,7 @@ public class GitHubRepositoryManager {
 
 
     public void uploadImages(String owner, String repo) {
-        String imagesDirectoryPath = "/Users/dounya/Desktop/SuperNotes_version/SuperNotes/app/images";
+        String imagesDirectoryPath = "/app/images";
         File imagesDirectory = new File(imagesDirectoryPath);
 
         if (imagesDirectory.exists() && imagesDirectory.isDirectory()) {

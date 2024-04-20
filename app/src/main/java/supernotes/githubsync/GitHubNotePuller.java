@@ -4,27 +4,16 @@ import org.kohsuke.github.GHContent;
 import org.kohsuke.github.GHRepository;
 import org.kohsuke.github.GitHub;
 import org.kohsuke.github.GitHubBuilder;
-import supernotes.githubsync.GitHubAuthenticator;
-import supernotes.githubsync.GitHubRepositoryManager;
-import supernotes.management.NoteManagerDataBase;
 import supernotes.management.SQLiteDBManager;
 import supernotes.notes.ImageNote;
 import supernotes.notes.Note;
 import supernotes.notes.TextNote;
-
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import static supernotes.githubsync.GitHubAuthenticator.authenticate;
-import static supernotes.githubsync.GitHubAuthenticator.setAuthToken;
 
 public class GitHubNotePuller {
     public void pullNotesFromGitHub (String repoName, String fileName) {
@@ -107,7 +96,7 @@ public class GitHubNotePuller {
 
 
     private static void saveNotesToSQLite(ArrayList<Note> notes) {
-        SQLiteDBManager dbManager = new SQLiteDBManager(); // Créer une instance de votre gestionnaire de base de données
+        SQLiteDBManager dbManager = new SQLiteDBManager();
 
         for (Note note : notes) {
             if (note instanceof TextNote) {
