@@ -52,17 +52,4 @@ public class GitHubAuthenticator {
             return false;
         }
     }
-
-    /*public static void main(String[] args) {
-        // Exemple d'utilisation
-        String token = "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"; // Remplacez par votre token GitHub
-
-        if (authenticate(token)) {
-            setAuthToken(token);
-            System.out.println("Authentication successful!");
-            // Code pour la synchronisation avec GitHub
-        } else {
-            System.out.println("Authentication failed!");
-        }
-    }*/
 }

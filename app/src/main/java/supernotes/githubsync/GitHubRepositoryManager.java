@@ -52,33 +52,6 @@ public class GitHubRepositoryManager {
         return false;
     }
 
-    /*public void uploadNotesAsAsciiDoc(ArrayList<Note> notes, String asciiDocFileName) throws IOException {
-        if (notes == null || notes.isEmpty()) {
-            System.out.println("Aucune note à sauvegarder.");
-            return;
-        }
-
-        try {
-            String username = getUsername();
-            asciiDocFileName = asciiDocFileName.endsWith(".adoc") ? asciiDocFileName : asciiDocFileName + ".adoc";
-
-            String owner = username; // Utilisez le nom d'utilisateur comme propriétaire du référentiel
-            String repo = username.toLowerCase() + "-notes"; // Utilisez le nom d'utilisateur comme nom du référentiel
-
-            String asciiDocContent = generateAsciiDocContent(notes, username);
-
-            byte[] asciiDocBytes = asciiDocContent.getBytes();
-
-            // Téléverser le fichier AsciiDoc
-            uploadFile(owner, repo, asciiDocFileName, asciiDocBytes);
-            uploadImages(owner, repo);
-        } catch (IOException e) {
-            e.printStackTrace();
-            System.out.println("Une erreur s'est produite lors de l'upload du fichier AsciiDoc : " + e.getMessage());
-            throw e; // Lancer l'exception IOException à l'appelant
-        }
-    }*/
-
     public void uploadNotesAsAsciiDoc(ArrayList<Note> notes, String asciiDocFileName, String repo) throws IOException {
         if (notes == null || notes.isEmpty()) {
             System.out.println("Aucune note à sauvegarder.");
