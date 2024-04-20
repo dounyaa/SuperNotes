@@ -117,7 +117,20 @@ class GoogleCalendarReminder{
 
 class GoogleCalendarService{
     +getCalendarService(): Calendar
-    }  
+    }
+
+class GitHubSyncManager {
+    +syncNotesWithGitHub(String: repoName, String: noteContent): void
+}
+
+class GitHubRepositoryManager {
+    +createPrivateRepository(String: repoName): Repository
+    +createPublicRepository(String: repoName): Repository
+}
+
+class GitHubAuthenticator {
+    +authenticate(String: username, String: password): String
+}
 
 Note <|.. TextNote
 Note <|.. ImageNote
@@ -140,6 +153,9 @@ CommandLineInterface ..> NotionApiManager : sendsCommands
 FileManager ..> DriveQuickstart: uses
 
 GoogleCalendarReminder ..> GoogleCalendarService
+
+GitHubSyncManager ..> GitHubRepositoryManager
+GitHubSyncManager ..> GitHubAuthenticator
 
 @enduml
 =======

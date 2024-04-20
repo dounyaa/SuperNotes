@@ -313,6 +313,80 @@ public class SQLiteDBManager implements DBManager {
             LOGGER.error("Une erreur s'est produite.", e);
         }
     }
+
+    @Override
+    public ArrayList<Note> getNotesByType(String type) {
+        String sql = "SELECT * FROM notes WHERE type = ?";
+
+        ArrayList<Note> result = new ArrayList<>();
+
+        try (Connection conn = this.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, type);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    int retrievedNoteId = rs.getInt("id");
+                    String tags = rs.getString("tag_list");
+
+                    if ("text".equals(type)) {
+                        TextNote textNote = new TextNote(rs.getString("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
+                        textNote.setId(retrievedNoteId);
+                        textNote.setTime(rs.getString("time"));
+                        result.add(textNote);
+                    } else if ("image".equals(type)) {
+                        ImageNote imageNote = new ImageNote(rs.getString("path"), rs.getBytes("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
+                        imageNote.setId(retrievedNoteId);
+                        imageNote.setTime(rs.getString("time"));
+                        result.add(imageNote);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Une erreur s'est produite lors de la récupération des notes de type " + type, e);
+        }
+
+        return result;
+    }
+
+
+
+    @Override
+    public ArrayList<Note> getNoteByNoteId(int noteId) {
+        String sql = "SELECT * FROM notes WHERE id = ?";
+
+        ArrayList<Note> result = new ArrayList<>();
+
+        try (Connection conn = this.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, noteId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String type = rs.getString("type");
+                    int retrievedNoteId = rs.getInt("id");
+                    String tags = rs.getString("tag_list");
+
+                    if ("text".equals(type)) {
+                        TextNote textNote = new TextNote(rs.getString("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
+                        textNote.setId(retrievedNoteId);
+                        textNote.setTime(rs.getString("time"));
+                        result.add(textNote);
+                    } else if ("image".equals(type)) {
+                        ImageNote imageNote = new ImageNote(rs.getString("path"), rs.getBytes("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
+                        imageNote.setId(retrievedNoteId);
+                        imageNote.setTime(rs.getString("time"));
+                        result.add(imageNote);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Une erreur s'est produite lors de la récupération de la note avec l'ID " + noteId, e);
+        }
+
+        return result;
+    }
+
     
 
     @Override
@@ -400,7 +474,7 @@ public class SQLiteDBManager implements DBManager {
             if (conn != null) {
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-                pstmt.setString(1, linkName.trim()); // Assurez-vous d'utiliser trim() ici
+                pstmt.setString(1, linkName.trim());
                 try (ResultSet rs = pstmt.executeQuery()) {
 
                     boolean found = false;
@@ -590,7 +664,7 @@ public class SQLiteDBManager implements DBManager {
             LOGGER.error("Une erreur s'est produite.", e);
         }
     }
-    
+
     public boolean doesNoteExist(String pageId) {
         try (Connection conn = getConnection()) {
             if (conn != null) {

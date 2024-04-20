@@ -30,4 +30,12 @@ public interface NoteManager{
 
     int linkNotesWithANDAfterDate(int noteId, String[] tags, String linkName, String date);
     boolean getAllLinksByName(String linkName);
+
+    ArrayList<Note> getAllNotesLike(String contentMotif);
+
+    ArrayList<Note> getNoteByNoteId(int noteId);
+
+    ArrayList<Note> getNotesByType(String type);
+
+
 }

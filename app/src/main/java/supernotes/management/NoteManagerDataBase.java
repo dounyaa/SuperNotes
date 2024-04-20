@@ -142,4 +142,19 @@ public class NoteManagerDataBase implements NoteManager {
         return dbManager.getAllLinksByName(linkName);
     }
 
+
+    @Override
+    public ArrayList<Note> getAllNotesLike(String contentMotif) {
+        return dbManager.getAllNotesLike(contentMotif);
+    }
+    @Override
+    public ArrayList<Note> getNoteByNoteId(int noteId){
+        return getNoteByNoteId(noteId);
+    }
+    @Override
+    public ArrayList<Note> getNotesByType(String type){
+        return getNotesByType(type);
+    }
+
+
 }

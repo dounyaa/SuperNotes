@@ -1,9 +1,12 @@
 package supernotes.management;
 
 import com.google.api.client.util.DateTime;
-
 import supernotes.constants.MessagesContants;
 import supernotes.file_handling.FileHandler;
+import supernotes.file_handling.ImageFileManager;
+import supernotes.githubsync.GitHubAuthenticator;
+import supernotes.githubsync.GitHubRepositoryHandler;
+import supernotes.githubsync.GitHubRepositoryManager;
 import supernotes.helpers.InputScanner;
 import supernotes.helpers.MyLogger;
 import supernotes.notes.ImageNote;
@@ -12,21 +15,18 @@ import supernotes.notes.NoteFactory;
 import supernotes.notionAPI.NotionApiManager;
 import supernotes.notionAPI.NotionManager;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.swing.*;
 
 public class CommandLineInterface {
     private final NoteFactory textNoteFactory;
@@ -35,13 +35,18 @@ public class CommandLineInterface {
     private final NoteManager noteManager;
     private final NotionApiManager notionApiManager;
     private final NotionManager notionManager;
+    private final GitHubRepositoryManager repositoryManager;
+    private final GitHubRepositoryHandler repositoryHandler;
+    private final ImageFileManager imageFileManager;
     private static final MyLogger LOGGER = MyLogger.getInstance();
 
-
-    public CommandLineInterface(NoteFactory textNoteFactory, NoteFactory imageNoteFactory, FileHandler fileHandler, NotionManager notionManager, NotionApiManager notionApiManager) {
+    public CommandLineInterface(NoteFactory textNoteFactory, NoteFactory imageNoteFactory, FileHandler fileHandler, NotionManager notionManager, NotionApiManager notionApiManager, GitHubRepositoryManager repositoryManager, GitHubRepositoryHandler repositoryHandler, ImageFileManager imageFileManager) {
         this.textNoteFactory = textNoteFactory;
         this.imageNoteFactory = imageNoteFactory;
         this.fileHandler = fileHandler;
+        this.repositoryManager = repositoryManager;
+        this.repositoryHandler = repositoryHandler;
+        this.imageFileManager = imageFileManager;
         this.noteManager = new NoteManagerDataBase();
         this.notionApiManager = notionApiManager;
         this.notionManager = notionManager;
@@ -111,7 +116,18 @@ public class CommandLineInterface {
         if (parseShowAllLinksByNameCommand(command)) {
             return;
         }
-
+        if(parseGithubAuthCommand(command)){
+            return;
+        }
+        if(parsePushNotesCommand(command)){
+            return;
+        }
+        if(parseShareNotesCommand(command)){
+            return;
+        }
+        if(parsePullNotesCommand(command)){
+            return;
+        }
         handleInvalidCommand();
     }
 
@@ -126,14 +142,22 @@ public class CommandLineInterface {
             NoteFactory noteFactory = isImage(noteContent) ? imageNoteFactory : textNoteFactory;
             Note note = noteFactory.createNote(noteContent, noteTag, null, null);
 
-            int id = noteManager.addNote(note);
-            LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
+            if (note instanceof ImageNote) {
+                ImageNote imageNote = (ImageNote) note;
+                int id = noteManager.addNote(note);
+                LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
+                imageFileManager.createOrUpdateImageNote(imageNote.getPath(), imageNote.getContent(), imageNote.getTag(), imageNote.getParentPageId(), imageNote.getPageId());
+            } else {
+                int id = noteManager.addNote(note);
+                LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
+            }
 
             return true;
         }
 
         return false;
     }
+
 
     public boolean parseDeleteNotesByTagCommand(String command) {
         Pattern deleteNotesPattern = Pattern.compile("^sn delete --tag \"(.*)\"$");
@@ -627,12 +651,164 @@ public class CommandLineInterface {
         return false;
     }
 
+    private boolean parseGithubAuthCommand(String command) {
+        Pattern GithubAuthCommandPattern = Pattern.compile("sn github auth \"([^\"]+)\"");
+        Matcher GithubAuthCommandMatcher = GithubAuthCommandPattern.matcher(command);
+
+        if (GithubAuthCommandMatcher.matches()) {
+            String token = GithubAuthCommandMatcher.group(1);
+            GitHubAuthenticator.setAuthToken(token);
+            boolean authenticated = GitHubAuthenticator.authenticate(token);
+            if (authenticated) {
+                System.out.println("L'authentification GitHub a réussi !");
+            } else {
+                System.out.println("L'authentification GitHub a échoué !");
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean parsePushNotesCommand(String command) {
+        Pattern githubPushNotesCommandPattern = Pattern.compile("sn github push \"([^\"]+)\"");
+        Matcher githubPushNotesCommandMatcher = githubPushNotesCommandPattern.matcher(command);
+
+        if (githubPushNotesCommandMatcher.matches()) {
+            String asciiDocFileName = githubPushNotesCommandMatcher.group(1);
+            if (repositoryManager != null) {
+                List<Note> notesList = noteManager.showAllNotes();
+                ArrayList<Note> notes = new ArrayList<>(notesList);
+
+                try {
+                    String repoName = repositoryManager.getUsername().toLowerCase() + "-notes"; // Utilisez le nom d'utilisateur comme nom du référentiel
+                    repositoryManager.uploadNotesAsAsciiDoc(notes, asciiDocFileName, repoName);
+                    return true;
+                } catch (IOException e) {
+                    System.out.println("Erreur lors de la sauvegarde des notes sur GitHub : " + e.getMessage());
+                }
+            } else {
+                System.out.println("Erreur : Aucun référentiel GitHub privé trouvé. Veuillez vous authentifier d'abord.");
+            }
+        }
+
+        return false;
+    }
+
+    /*public boolean parseShareNotesCommand(String command) {
+        Pattern githubPushNotesCommandPattern = Pattern.compile("sn github share \"([^\"]+)\" \"([^\"]+)\" \"([^\"]+)\"");
+        Matcher githubPushNotesCommandMatcher = githubPushNotesCommandPattern.matcher(command);
+
+        if (githubPushNotesCommandMatcher.matches()) {
+            String repoName = githubPushNotesCommandMatcher.group(1);
+            String fileName = githubPushNotesCommandMatcher.group(2);
+            String collaboratorsString = githubPushNotesCommandMatcher.group(3);
+
+            // Convertir la liste de collaborateurs en une liste
+            List<String> collaborators = Arrays.asList(collaboratorsString.split("\\s+"));
+
+            if (repositoryHandler != null) {
+                List<Note> notesList = noteManager.showAllNotes();
+                ArrayList<Note> notes = new ArrayList<>(notesList);
+                repositoryHandler.createRepository(repoName, notes, fileName, collaborators);
+                return true;
+            } else {
+                System.out.println("Erreur : Aucun gestionnaire de référentiel GitHub trouvé. Veuillez vous authentifier d'abord.");
+            }
+        } else {
+            System.out.println("Erreur : Commande invalide. Utilisation attendue : sn github share \"repoName\" \"fileName\" \"collaborator1 collaborator2 ...\"");
+        }
+        return false;
+    }*/
+
+    public boolean parseShareNotesCommand(String command) {
+        Pattern githubPushNotesCommandPattern = Pattern.compile("sn github share \"([^\"]+)\" \"([^\"]+)\" \"([^\"]+)\"( --filtre \"([^\"]+)\")?");
+        Matcher githubPushNotesCommandMatcher = githubPushNotesCommandPattern.matcher(command);
+
+        if (githubPushNotesCommandMatcher.matches()) {
+            String repoName = githubPushNotesCommandMatcher.group(1);
+            String fileName = githubPushNotesCommandMatcher.group(2);
+            String collaboratorsString = githubPushNotesCommandMatcher.group(3);
+            String filterOption = githubPushNotesCommandMatcher.group(5);
+
+            // Convertir la liste de collaborateurs en une liste
+            List<String> collaborators = Arrays.asList(collaboratorsString.split("\\s+"));
+
+
+            List<Note> filteredNotes = null;
+
+            if (filterOption != null) {
+                // Traitement du filtre
+                String[] filterParts = filterOption.split(" ");
+                String filterType = filterParts[0];
+                String filterValue = filterParts[1];
+                filteredNotes = filterNotes(filterType, filterValue);
+            } else {
+                // Si aucun filtre n'est spécifié, récupérer toutes les notes
+                filteredNotes = noteManager.showAllNotes();
+            }
+
+            if (repositoryHandler != null) {
+                ArrayList<Note> notes = new ArrayList<>(filteredNotes);
+                repositoryHandler.createRepository(repoName, notes, fileName, collaborators);
+                return true;
+            } else {
+                System.out.println("Erreur : Aucun gestionnaire de référentiel GitHub trouvé. Veuillez vous authentifier d'abord.");
+            }
+        }
+        return false;
+    }
+
+
+    public boolean parsePullNotesCommand(String command) {
+        Pattern githubPullNotesCommandPattern = Pattern.compile("sn github pull \"([^\"]+)\" \"([^\"]+)\"");
+        Matcher githubPullNotesCommandMatcher = githubPullNotesCommandPattern.matcher(command);
+
+        if (githubPullNotesCommandMatcher.matches()) {
+            String repoName = githubPullNotesCommandMatcher.group(1);
+            String fileName = githubPullNotesCommandMatcher.group(2);
+
+            //gitHubNotePuller.pullNotesFromGitHub(repoName, fileName);
+
+            return true;
+        } else {
+            System.out.println("Erreur : Aucun gestionnaire de référentiel GitHub trouvé. Veuillez vous authentifier d'abord.");
+            return false;
+        }
+    }
+
+
+
     private void handleInvalidCommand() {
         LOGGER.logInfo("Commande invalide. Tapez 'sn --help' pour afficher l'aide.");
     }
 
     private boolean isImage(String path) {
         return path.endsWith(".jpg") || path.endsWith(".png") || path.endsWith(".gif");
+    }
+
+    private List<Note> filterNotes(String filterType, String filterValue) {
+        List<Note> filteredNotes = new ArrayList<>();
+
+        switch (filterType) {
+            case "--id":
+                filteredNotes.addAll(noteManager.getNoteByNoteId(Integer.parseInt(filterValue)));
+                break;
+            case "--tag":
+                filteredNotes.addAll(noteManager.getByTag(filterValue));
+                break;
+            case "--word":
+                filteredNotes.addAll(noteManager.getAllNotesLike(filterValue));
+                break;
+            case "--type":
+                filteredNotes.addAll(noteManager.getNotesByType(filterValue));
+                break;
+            default:
+                System.out.println("Filtre non pris en charge : " + filterType);
+                break;
+        }
+
+        return filteredNotes;
     }
 
     public void displayHelp() {
@@ -655,6 +831,9 @@ public class CommandLineInterface {
         LOGGER.logInfo("- Pour lier des notes : sn link --id \"ID_de_la_note\" --tag \"tag1\" [and/or] \"tag2\" [...] --name \"Nom_de_lien\" [--at/--before/--after \"Date\"]\n");
         LOGGER.logInfo("- Pour Afficher les Liens des notes : sn show --link \"Nom_de_lien\"\n");
         LOGGER.logInfo("- Pour afficher toutes les notes : sn show notes");
+        LOGGER.logInfo("- Pour s'authentifier avec github : sn github auth \"token GitHub\" ");
+        LOGGER.logInfo("- Pour synchroniser les notes avec github : sn github push \"nom du fichier.pdf\" ");
+        LOGGER.logInfo("- Partager ses notes avec un collaborateur sur Github : sn github share \"repoName\" \"fileName\" \"collaborator\"@");
         LOGGER.logInfo("Pour quitter l'application : exit");
     }
 

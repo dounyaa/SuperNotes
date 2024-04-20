@@ -55,4 +55,10 @@ public interface DBManager {
     int linkNotesWithANDAfterDate(int noteId, String[] tags, String linkName, String date);
 
     boolean getAllLinksByName(String linkName);
+
+    ArrayList<Note> getNoteByNoteId(int noteId);
+
+    ArrayList<Note> getNotesByType(String type);
+
+
 }
