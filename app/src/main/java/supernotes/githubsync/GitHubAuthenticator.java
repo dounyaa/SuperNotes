@@ -11,7 +11,7 @@ public class GitHubAuthenticator {
     private static final String GITHUB_API_URL = "https://api.github.com/user";
 
 
-    private static String authToken = "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";
+    private static String authToken;
 
     public static String getAuthToken() {
         return authToken;
