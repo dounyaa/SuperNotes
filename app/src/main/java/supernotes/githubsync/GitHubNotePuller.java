@@ -8,7 +8,9 @@ import supernotes.management.SQLiteDBManager;
 import supernotes.notes.ImageNote;
 import supernotes.notes.Note;
 import supernotes.notes.TextNote;
+
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -16,11 +18,18 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class GitHubNotePuller {
-    public void pullNotesFromGitHub (String repoName, String fileName) {
+    private final String token;
+
+    public GitHubNotePuller() {
+        this.token = GitHubAuthenticator.getAuthToken();
+    }
+
+    public void pullNotesFromGitHub(String repoName, String fileName) {
         try {
-            GitHub github = new GitHubBuilder().build();
-            GitHubRepositoryManager manager = new GitHubRepositoryManager();
-            String owner = manager.getUsername();
+            GitHub github = new GitHubBuilder()
+                    .withOAuthToken(token)
+                    .build();
+            String owner = github.getMyself().getLogin();
             GHRepository repository = github.getRepository(owner + "/" + repoName);
 
             // Récupérer le contenu du fichier .adoc
@@ -41,7 +50,6 @@ public class GitHubNotePuller {
                 }
             }
 
-
             // Sauvegarder les notes dans la base de données SQLite
             saveNotesToSQLite(notes);
         } catch (IOException e) {
@@ -51,7 +59,9 @@ public class GitHubNotePuller {
 
     private static String getFileContent(GHRepository repository, String filePath) throws IOException {
         GHContent content = repository.getFileContent(filePath);
-        return content.getContent();
+        try (InputStream inputStream = content.read()) {
+            return new String(inputStream.readAllBytes());
+        }
     }
 
     private static ArrayList<Note> extractNotesFromAdoc(String adocContent) {
@@ -94,7 +104,6 @@ public class GitHubNotePuller {
         return null;
     }
 
-
     private static void saveNotesToSQLite(ArrayList<Note> notes) {
         SQLiteDBManager dbManager = new SQLiteDBManager();
 
@@ -104,12 +113,8 @@ public class GitHubNotePuller {
                 dbManager.addTextNote(textNote.getContent(), textNote.getTag(), null, null, null);
             } else if (note instanceof ImageNote) {
                 ImageNote imageNote = (ImageNote) note;
-                dbManager.addImageNote( imageNote.getPath(), imageNote.getContent(), imageNote.getTag(), null, null, null);
+                dbManager.addImageNote(imageNote.getPath(), imageNote.getContent(), imageNote.getTag(), null, null, null);
             }
         }
     }
-
 }
-
-
-
