@@ -313,19 +313,19 @@ La version v1.1 de SuperNote propose les fonctionnalités suivantes :
 ## Synchronisation avec GitHub (Commandes sn github)
 - **Authentification GitHub :** permet d'authentifier SuperNotes avec votre compte GitHub en utilisant un jeton d'accès personnel.
   ```bash
-sn github auth "<votre_token_d'accès_GitHub>"
+   sn github auth "<votre_token_d'accès_GitHub>"
 
 - **Pousser les Notes vers GitHub :** permet de télécharger vos notes vers un dépôt GitHub spécifié au format AsciiDoc.
   ```bash
-sn github push "<nom_fichier_AsciiDoc>"
+   sn github push "<nom_fichier_AsciiDoc>"
 
 - **Partager les Notes via GitHub :** permet de créer un nouveau dépôt GitHub et d'ajouter des collaborateurs pour partager vos notes.
   ```bash
-sn github share "<nom_dépôt>" "<nom_fichier>" "<collaborateurs>" [--filtre "<type_filtre> <valeur_filtre>"]
+   sn github share "<nom_dépôt>" "<nom_fichier>" "<collaborateurs>" [--filtre "<type_filtre> <valeur_filtre>"]
 
 - **Tirer les Notes depuis GitHub :** permet de récupérer les notes d'un dépôt GitHub spécifié et de les importer dans SuperNotes.
   ```bash
-sn github pull "<nom_dépôt>" "<nom_fichier>"
+   sn github pull "<nom_dépôt>" "<nom_fichier>"
 
 ## Groupe
 
