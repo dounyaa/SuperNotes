@@ -5,6 +5,7 @@ import supernotes.constants.MessagesContants;
 import supernotes.file_handling.FileHandler;
 import supernotes.file_handling.ImageFileManager;
 import supernotes.githubsync.GitHubAuthenticator;
+import supernotes.githubsync.GitHubNotePuller;
 import supernotes.githubsync.GitHubRepositoryHandler;
 import supernotes.githubsync.GitHubRepositoryManager;
 import supernotes.helpers.InputScanner;
@@ -38,15 +39,17 @@ public class CommandLineInterface {
     private final GitHubRepositoryManager repositoryManager;
     private final GitHubRepositoryHandler repositoryHandler;
     private final ImageFileManager imageFileManager;
+    private final GitHubNotePuller gitHubNotePuller;
     private static final MyLogger LOGGER = MyLogger.getInstance();
 
-    public CommandLineInterface(NoteFactory textNoteFactory, NoteFactory imageNoteFactory, FileHandler fileHandler, NotionManager notionManager, NotionApiManager notionApiManager, GitHubRepositoryManager repositoryManager, GitHubRepositoryHandler repositoryHandler, ImageFileManager imageFileManager) {
+    public CommandLineInterface(NoteFactory textNoteFactory, NoteFactory imageNoteFactory, FileHandler fileHandler, NotionManager notionManager, NotionApiManager notionApiManager, GitHubRepositoryManager repositoryManager, GitHubRepositoryHandler repositoryHandler, ImageFileManager imageFileManager, GitHubNotePuller gitHubNotePuller) {
         this.textNoteFactory = textNoteFactory;
         this.imageNoteFactory = imageNoteFactory;
         this.fileHandler = fileHandler;
         this.repositoryManager = repositoryManager;
         this.repositoryHandler = repositoryHandler;
         this.imageFileManager = imageFileManager;
+        this.gitHubNotePuller = gitHubNotePuller;
         this.noteManager = new NoteManagerDataBase();
         this.notionApiManager = notionApiManager;
         this.notionManager = notionManager;
@@ -695,32 +698,6 @@ public class CommandLineInterface {
         return false;
     }
 
-    /*public boolean parseShareNotesCommand(String command) {
-        Pattern githubPushNotesCommandPattern = Pattern.compile("sn github share \"([^\"]+)\" \"([^\"]+)\" \"([^\"]+)\"");
-        Matcher githubPushNotesCommandMatcher = githubPushNotesCommandPattern.matcher(command);
-
-        if (githubPushNotesCommandMatcher.matches()) {
-            String repoName = githubPushNotesCommandMatcher.group(1);
-            String fileName = githubPushNotesCommandMatcher.group(2);
-            String collaboratorsString = githubPushNotesCommandMatcher.group(3);
-
-            // Convertir la liste de collaborateurs en une liste
-            List<String> collaborators = Arrays.asList(collaboratorsString.split("\\s+"));
-
-            if (repositoryHandler != null) {
-                List<Note> notesList = noteManager.showAllNotes();
-                ArrayList<Note> notes = new ArrayList<>(notesList);
-                repositoryHandler.createRepository(repoName, notes, fileName, collaborators);
-                return true;
-            } else {
-                System.out.println("Erreur : Aucun gestionnaire de référentiel GitHub trouvé. Veuillez vous authentifier d'abord.");
-            }
-        } else {
-            System.out.println("Erreur : Commande invalide. Utilisation attendue : sn github share \"repoName\" \"fileName\" \"collaborator1 collaborator2 ...\"");
-        }
-        return false;
-    }*/
-
     public boolean parseShareNotesCommand(String command) {
         Pattern githubPushNotesCommandPattern = Pattern.compile("sn github share \"([^\"]+)\" \"([^\"]+)\" \"([^\"]+)\"( --filtre \"([^\"]+)\")?");
         Matcher githubPushNotesCommandMatcher = githubPushNotesCommandPattern.matcher(command);
@@ -768,13 +745,11 @@ public class CommandLineInterface {
             String repoName = githubPullNotesCommandMatcher.group(1);
             String fileName = githubPullNotesCommandMatcher.group(2);
 
-            //gitHubNotePuller.pullNotesFromGitHub(repoName, fileName);
+            gitHubNotePuller.pullNotesFromGitHub(repoName, fileName);
 
             return true;
-        } else {
-            System.out.println("Erreur : Aucun gestionnaire de référentiel GitHub trouvé. Veuillez vous authentifier d'abord.");
-            return false;
         }
+        return false;
     }
 
 

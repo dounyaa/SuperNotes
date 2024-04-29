@@ -2,6 +2,7 @@ package supernotes;
 
 import supernotes.file_handling.*;
 import supernotes.githubsync.GitHubAuthenticator;
+import supernotes.githubsync.GitHubNotePuller;
 import supernotes.githubsync.GitHubRepositoryHandler;
 import supernotes.githubsync.GitHubRepositoryManager;
 import supernotes.helpers.InputScanner;
@@ -22,7 +23,7 @@ public class App {
 
     public static void main(String[] args) throws SQLException {
         FileManager fileManager = new FileManager();
-        CommandLineInterface commandLineInterface = new CommandLineInterface(new TextNoteFactory(), new ImageNoteFactory(), fileManager, new NotionPageManager(), new NotionAPI(), new GitHubRepositoryManager(), new GitHubRepositoryHandler(), new ImageFileManager());
+        CommandLineInterface commandLineInterface = new CommandLineInterface(new TextNoteFactory(), new ImageNoteFactory(), fileManager, new NotionPageManager(), new NotionAPI(), new GitHubRepositoryManager(), new GitHubRepositoryHandler(), new ImageFileManager(), new GitHubNotePuller());
         String command = "";
         Scanner scanner = InputScanner.getInstance();
         do {
