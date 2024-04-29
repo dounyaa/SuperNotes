@@ -327,6 +327,35 @@ La version v1.1 de SuperNote propose les fonctionnalités suivantes :
   ```bash
    sn github pull "<nom_dépôt>" "<nom_fichier>"
 
+## Conteneurisation et Virtualisation
+Pour faciliter le déploiement et les environnements de développement, SuperNote prend en charge la conteneurisation et la virtualisation à l'aide de Docker et Vagrant.
+
+### Docker
+Le Dockerfile fourni dans le dépôt du projet vous permet de construire une image Docker pour SuperNote. Pour construire l'image Docker, suivez ces étapes :
+
+- Naviguez jusqu'au répertoire racine du projet.
+- Exécutez la commande suivante pour construire l'image Docker :
+  ```bash
+  docker build -t supernotes . 
+
+- Une fois l'image construite, vous pouvez exécuter un conteneur Docker en utilisant la commande suivante :
+  ```bash
+   docker run -it -p 8080:8080 supernotes
+
+### Vagrant
+Le fichier Vagrantfile inclus dans le dépôt du projet vous permet de créer une machine virtuelle Vagrant pour SuperNote. Pour configurer la machine virtuelle, suivez ces étapes :
+
+- Naviguez jusqu'au répertoire racine du projet.
+- Exécutez la commande suivante pour démarrer la machine virtuelle Vagrant :
+  ```bash
+   vagrant up
+  
+- Une fois la machine virtuelle démarrée, vous pouvez vous connecter en SSH à la machine en utilisant la commande suivante :
+  ```bash
+   vagrant ssh
+  
+Ces options de conteneurisation et de virtualisation offrent un moyen pratique de gérer SuperNote sur différents environnements et plates-formes.
+
 ## Groupe
 
 - Dounya Alaoui
