@@ -72,4 +72,31 @@ public class AppTest {
         }
     }
 
+    @Test
+    public void testGitHubAuthentication() throws SQLException, IOException {
+        String githubToken = "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";
+
+        String authenticationCommand = "sn github auth \"" + githubToken + "\"\nexit\n";
+
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        System.setOut(new PrintStream(outputStream));
+
+        InputStream inputStream = new ByteArrayInputStream(authenticationCommand.getBytes());
+        System.setIn(inputStream);
+        InputScanner.setInstance(null);
+
+        try {
+            App.main(new String[0]);
+
+            String actualOutput = outputStream.toString().trim();
+            inputStream.close();
+            outputStream.close();
+
+            assertTrue("L'authentification GitHub a échoué.", actualOutput.contains("L'authentification GitHub a réussi !"));
+        } catch (Exception e) {
+            assertTrue("Une exception inattendue s'est produite : " + e.getMessage(), false);
+            throw e;
+        }
+    }
+
 }
