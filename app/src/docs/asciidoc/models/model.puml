@@ -119,17 +119,22 @@ class GoogleCalendarService{
     +getCalendarService(): Calendar
     }
 
-class GitHubSyncManager {
-    +syncNotesWithGitHub(String: repoName, String: noteContent): void
+class GitHubRepositoryHandler  {
+    +addCollaborator(String: owner, String: repoName, String: collaboratorUsername): void
 }
 
 class GitHubRepositoryManager {
     +createPrivateRepository(String: repoName): Repository
-    +createPublicRepository(String: repoName): Repository
+    +uploadNotesAsAsciiDoc(ArrayList<Note>: notes, String: asciiDocFileName, String: repo): void
 }
 
 class GitHubAuthenticator {
     +authenticate(String: username, String: password): String
+}
+
+class GitHubNotePuller {
+    +pullNotesFromGitHub(String: repoName, String: fileName): void
+    +saveNotesToSQLite(ArrayList<Note>: notes): void
 }
 
 Note <|.. TextNote
@@ -154,8 +159,10 @@ FileManager ..> DriveQuickstart: uses
 
 GoogleCalendarReminder ..> GoogleCalendarService
 
-GitHubSyncManager ..> GitHubRepositoryManager
-GitHubSyncManager ..> GitHubAuthenticator
+GitHubRepositoryManager ..> GitHubRepositoryHandler
+GitHubRepositoryManager ..> GitHubAuthenticator
+GitHubRepositoryManager ..> GitHubNotePuller
+GitHubRepositoryManager ..> Note
 
 @enduml
 =======
