@@ -62,6 +62,9 @@ public interface DBManager {
 
     ArrayList<Note> getNotesByType(String type);
 
+<<<<<<< HEAD
+
+=======
     String searchResultFromOllama(String searchParameter);
 
     void createOllamaSearchTable();
@@ -71,4 +74,5 @@ public interface DBManager {
     String extractResponseFromJson(String jsonResponse);
 
     String findContentBySearchId(String searchId);
+>>>>>>> main
 }

@@ -41,6 +41,10 @@ public class CommandLineInterface {
     private final GitHubRepositoryHandler repositoryHandler;
     private final ImageFileManager imageFileManager;
     private final GitHubNotePuller gitHubNotePuller;
+<<<<<<< HEAD
+    private static final MyLogger LOGGER = MyLogger.getInstance();
+=======
+>>>>>>> main
 
     public CommandLineInterface(NoteFactory textNoteFactory, NoteFactory imageNoteFactory, FileHandler fileHandler, NotionManager notionManager, NotionApiManager notionApiManager, GitHubRepositoryManager repositoryManager, GitHubRepositoryHandler repositoryHandler, ImageFileManager imageFileManager, GitHubNotePuller gitHubNotePuller) {
         this.textNoteFactory = textNoteFactory;
@@ -119,6 +123,18 @@ public class CommandLineInterface {
         if (parseShowAllLinksByNameCommand(command)) {
             return;
         }
+<<<<<<< HEAD
+        if(parseGithubAuthCommand(command)){
+            return;
+        }
+        if(parsePushNotesCommand(command)){
+            return;
+        }
+        if(parseShareNotesCommand(command)){
+            return;
+        }
+        if(parsePullNotesCommand(command)){
+=======
         if (parseGithubAuthCommand(command)) {
             return;
         }
@@ -135,6 +151,7 @@ public class CommandLineInterface {
             return;
         }
         if (parseAddNoteFromOllamaSearchCommand(command)) {
+>>>>>>> main
             return;
         }
         handleInvalidCommand();
@@ -151,7 +168,12 @@ public class CommandLineInterface {
             NoteFactory noteFactory = isImage(noteContent) ? imageNoteFactory : textNoteFactory;
             Note note = noteFactory.createNote(noteContent, noteTag, null, null);
 
+<<<<<<< HEAD
+            if (note instanceof ImageNote) {
+                ImageNote imageNote = (ImageNote) note;
+=======
             if (note instanceof ImageNote imageNote) {
+>>>>>>> main
                 int id = noteManager.addNote(note);
                 LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
                 imageFileManager.createOrUpdateImageNote(imageNote.getPath(), imageNote.getContent(), imageNote.getTag(), imageNote.getParentPageId(), imageNote.getPageId());
@@ -758,6 +780,10 @@ public class CommandLineInterface {
     }
 
 
+<<<<<<< HEAD
+
+=======
+>>>>>>> main
     private void handleInvalidCommand() {
         LOGGER.logInfo("Commande invalide. Tapez 'sn --help' pour afficher l'aide.");
     }
@@ -790,6 +816,8 @@ public class CommandLineInterface {
         return filteredNotes;
     }
 
+<<<<<<< HEAD
+=======
     public boolean parseOllamaSearchCommand(String command) {
         Pattern ollamaSearchCommandPattern = Pattern.compile("sn --ollama search \"\\s*([^\\s\"].*[^\\s\"])\\s*\"");
         Matcher ollamaSearchCommandMatcher = ollamaSearchCommandPattern.matcher(command);
@@ -830,6 +858,7 @@ public class CommandLineInterface {
         return false;
     }
 
+>>>>>>> main
     public void displayHelp() {
         LOGGER.logInfo("Bienvenue dans SuperNotes !");
         LOGGER.logInfo("Voici les commandes disponibles :");
@@ -853,8 +882,11 @@ public class CommandLineInterface {
         LOGGER.logInfo("- Pour s'authentifier avec github : sn github auth \"token GitHub\" ");
         LOGGER.logInfo("- Pour synchroniser les notes avec github : sn github push \"nom du fichier.pdf\" ");
         LOGGER.logInfo("- Partager ses notes avec un collaborateur sur Github : sn github share \"repoName\" \"fileName\" \"collaborator\"@");
+<<<<<<< HEAD
+=======
         LOGGER.logInfo("- Pour effectuer une recherche avec Ollama: sn --ollama search \"term\"");
         LOGGER.logInfo("- Pour ajouter une note à partir de l'ID du résultat de recherche Ollama : sn add --from-search \"Contenu de la note\" --tag \"Tag de la note\" --reminder \"Date et heure du rappel\"");
+>>>>>>> main
         LOGGER.logInfo("Pour quitter l'application : exit");
     }
 

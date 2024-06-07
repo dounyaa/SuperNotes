@@ -326,7 +326,12 @@ public class SQLiteDBManager implements DBManager {
 
         ArrayList<Note> result = new ArrayList<>();
 
+<<<<<<< HEAD
+        try (Connection conn = this.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+=======
         try (Connection conn = this.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+>>>>>>> main
             pstmt.setString(1, type);
 
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -354,6 +359,9 @@ public class SQLiteDBManager implements DBManager {
         return result;
     }
 
+<<<<<<< HEAD
+
+=======
     @Override
     public String searchResultFromOllama(String searchParameter) {
         try {
@@ -411,6 +419,7 @@ public class SQLiteDBManager implements DBManager {
             LOGGER.error("Une erreur s'est produite.", e);
         }
     }
+>>>>>>> main
 
     @Override
     public ArrayList<Note> getNoteByNoteId(int noteId) {
@@ -418,7 +427,12 @@ public class SQLiteDBManager implements DBManager {
 
         ArrayList<Note> result = new ArrayList<>();
 
+<<<<<<< HEAD
+        try (Connection conn = this.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+=======
         try (Connection conn = this.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+>>>>>>> main
             pstmt.setInt(1, noteId);
 
             try (ResultSet rs = pstmt.executeQuery()) {
@@ -447,6 +461,10 @@ public class SQLiteDBManager implements DBManager {
         return result;
     }
 
+<<<<<<< HEAD
+    
+=======
+>>>>>>> main
 
     @Override
     public void deleteNoteByTag(String tag) {
@@ -528,8 +546,13 @@ public class SQLiteDBManager implements DBManager {
             if (conn != null) {
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
+<<<<<<< HEAD
+                pstmt.setString(1, linkName.trim());
+                try (ResultSet rs = pstmt.executeQuery()) {
+=======
                     pstmt.setString(1, linkName.trim());
                     try (ResultSet rs = pstmt.executeQuery()) {
+>>>>>>> main
 
                         boolean found = false;
                         if (!rs.next()) {

@@ -52,7 +52,11 @@ public interface NoteManager {
 
     ArrayList<Note> getNotesByType(String type);
 
+<<<<<<< HEAD
+
+=======
     String searchResultFromOllama(String searchParameter);
 
     String findContentBySearchId(String searchId);
+>>>>>>> main
 }

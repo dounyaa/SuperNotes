@@ -2,6 +2,8 @@ app/build/
 
 .gradle/
 
+.images/
+
 *.db
 *.DS_Store
 *.idea/

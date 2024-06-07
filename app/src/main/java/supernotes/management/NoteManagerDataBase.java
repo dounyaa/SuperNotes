@@ -140,6 +140,18 @@ public class NoteManagerDataBase implements NoteManager {
     public ArrayList<Note> getAllNotesLike(String contentMotif) {
         return dbManager.getAllNotesLike(contentMotif);
     }
+<<<<<<< HEAD
+    @Override
+    public ArrayList<Note> getNoteByNoteId(int noteId){
+        return getNoteByNoteId(noteId);
+    }
+    @Override
+    public ArrayList<Note> getNotesByType(String type){
+        return getNotesByType(type);
+    }
+
+
+=======
 
     @Override
     public ArrayList<Note> getNoteByNoteId(int noteId) {
@@ -160,4 +172,5 @@ public class NoteManagerDataBase implements NoteManager {
     public String findContentBySearchId(String searchId) {
         return dbManager.findContentBySearchId(searchId);
     }
+>>>>>>> main
 }
