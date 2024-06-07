@@ -342,6 +342,7 @@ Pour effectuer une recherche en utilisant l'API Ollama, utilisez la commande sui
 
 ```bash
 sn --ollama search "terme de recherche"
+```
 
 Les résultats de la recherche seront affichés dans un format lisible dans la console.
 Ajouter des Résultats de Recherche à une Note
@@ -350,11 +351,13 @@ Ajouter des Résultats de Recherche à une Note
 
 ```bash
 sn add --from-search "ID_de_la_recherche"
+```
 
 - Si la recherche ne dispose pas d'un ID, vous pouvez copier/coller les informations trouvées et les ajouter manuellement à une note :
 
 ```bash
 sn add "Copier/COller le contenu selectionné"
+```
 
 Gestion des Erreurs
 
