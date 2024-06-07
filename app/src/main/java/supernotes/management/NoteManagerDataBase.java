@@ -1,19 +1,19 @@
 package supernotes.management;
 
-import java.sql.SQLException;
-import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-
 import supernotes.notes.ImageNote;
 import supernotes.notes.Note;
 import supernotes.notes.TextNote;
 import supernotes.reminders.GoogleCalendarReminder;
 
+import java.sql.SQLException;
+import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
+
 public class NoteManagerDataBase implements NoteManager {
     DBManager dbManager;
 
-    public NoteManagerDataBase(){
+    public NoteManagerDataBase() {
         dbManager = new SQLiteDBManager();
     }
 
@@ -29,7 +29,7 @@ public class NoteManagerDataBase implements NoteManager {
 
             noteId = dbManager.addTextNote(noteContent, noteTag, parentPageId, pageId, time);
             note.setId(noteId);
-            
+
         } else if (note instanceof ImageNote) {
             var imageContent = ((ImageNote) note).getContent();
             String noteTag = note.getTag();
@@ -45,7 +45,7 @@ public class NoteManagerDataBase implements NoteManager {
         return noteId;
     }
 
-    
+
     @Override
     public void addReminder(int noteId, LocalDateTime reminderDateTime) {
         dbManager.addReminder(noteId, reminderDateTime);
@@ -57,44 +57,37 @@ public class NoteManagerDataBase implements NoteManager {
     }
 
     @Override
-    public void deleteByTag(String tag)
-    {
+    public void deleteByTag(String tag) {
         dbManager.deleteNoteByTag(tag);
     }
 
     @Override
-    public void deleteNoteByNoteId(int noteId)
-    {
+    public void deleteNoteByNoteId(int noteId) {
         dbManager.deleteNoteByNoteId(noteId);
     }
 
     @Override
-    public ArrayList<Note> getByTag(String tag)
-    {
+    public ArrayList<Note> getByTag(String tag) {
         return dbManager.getAllNotesByTag(tag);
     }
 
     @Override
-    public String getParentPageId()
-    {
+    public String getParentPageId() {
         return dbManager.getParentPageId();
     }
 
     @Override
-    public String getPageId(String content)
-    {
+    public String getPageId(String content) {
         return dbManager.getPageId(content);
     }
-    
+
     @Override
-    public void updateNoteContentInDB(String pageId, String newContent)
-    {
+    public void updateNoteContentInDB(String pageId, String newContent) {
         dbManager.updateNoteContentInDB(pageId, newContent);
     }
 
     @Override
-    public boolean doesNoteExist(String pageId)
-    {
+    public boolean doesNoteExist(String pageId) {
         return dbManager.doesNoteExist(pageId);
     }
 
@@ -114,27 +107,27 @@ public class NoteManagerDataBase implements NoteManager {
 
     @Override
     public int linkNotesWithOR(int noteId, String[] tags, String linkName) throws SQLException {
-        return dbManager.linkNotesWithOR(noteId,tags,linkName);
+        return dbManager.linkNotesWithOR(noteId, tags, linkName);
     }
 
     @Override
     public int linkNotesWithAND(int noteId, String[] tags, String linkName) throws SQLException {
-        return dbManager.linkNotesWithAND(noteId,tags,linkName);
+        return dbManager.linkNotesWithAND(noteId, tags, linkName);
     }
 
     @Override
     public int linkNotesWithANDAtDate(int noteId, String[] tags, String linkName, String date) throws SQLException {
-        return dbManager.linkNotesWithANDAtDate(noteId,tags,linkName,date);
+        return dbManager.linkNotesWithANDAtDate(noteId, tags, linkName, date);
     }
 
     @Override
     public int linkNotesWithANDBeforeDate(int noteId, String[] tags, String linkName, String date) throws SQLException {
-        return dbManager.linkNotesWithANDBeforeDate(noteId,tags,linkName,date);
+        return dbManager.linkNotesWithANDBeforeDate(noteId, tags, linkName, date);
     }
 
     @Override
     public int linkNotesWithANDAfterDate(int noteId, String[] tags, String linkName, String date) {
-        return dbManager.linkNotesWithANDAfterDate(noteId,tags,linkName,date);
+        return dbManager.linkNotesWithANDAfterDate(noteId, tags, linkName, date);
     }
 
     @Override
@@ -147,6 +140,7 @@ public class NoteManagerDataBase implements NoteManager {
     public ArrayList<Note> getAllNotesLike(String contentMotif) {
         return dbManager.getAllNotesLike(contentMotif);
     }
+<<<<<<< HEAD
     @Override
     public ArrayList<Note> getNoteByNoteId(int noteId){
         return getNoteByNoteId(noteId);
@@ -157,4 +151,26 @@ public class NoteManagerDataBase implements NoteManager {
     }
 
 
+=======
+
+    @Override
+    public ArrayList<Note> getNoteByNoteId(int noteId) {
+        return getNoteByNoteId(noteId);
+    }
+
+    @Override
+    public ArrayList<Note> getNotesByType(String type) {
+        return getNotesByType(type);
+    }
+
+    @Override
+    public String searchResultFromOllama(String searchParameter) {
+        return dbManager.searchResultFromOllama(searchParameter);
+    }
+
+    @Override
+    public String findContentBySearchId(String searchId) {
+        return dbManager.findContentBySearchId(searchId);
+    }
+>>>>>>> main
 }

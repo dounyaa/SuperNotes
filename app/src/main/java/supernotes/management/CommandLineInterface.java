@@ -30,6 +30,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class CommandLineInterface {
+    private static final MyLogger LOGGER = MyLogger.getInstance();
     private final NoteFactory textNoteFactory;
     private final NoteFactory imageNoteFactory;
     private final FileHandler fileHandler;
@@ -40,7 +41,10 @@ public class CommandLineInterface {
     private final GitHubRepositoryHandler repositoryHandler;
     private final ImageFileManager imageFileManager;
     private final GitHubNotePuller gitHubNotePuller;
+<<<<<<< HEAD
     private static final MyLogger LOGGER = MyLogger.getInstance();
+=======
+>>>>>>> main
 
     public CommandLineInterface(NoteFactory textNoteFactory, NoteFactory imageNoteFactory, FileHandler fileHandler, NotionManager notionManager, NotionApiManager notionApiManager, GitHubRepositoryManager repositoryManager, GitHubRepositoryHandler repositoryHandler, ImageFileManager imageFileManager, GitHubNotePuller gitHubNotePuller) {
         this.textNoteFactory = textNoteFactory;
@@ -55,7 +59,7 @@ public class CommandLineInterface {
         this.notionManager = notionManager;
     }
 
-    public void parseCommand(String command) throws SQLException {        
+    public void parseCommand(String command) throws SQLException {
         if (parseAddNoteCommand(command)) {
             return;
         }
@@ -119,6 +123,7 @@ public class CommandLineInterface {
         if (parseShowAllLinksByNameCommand(command)) {
             return;
         }
+<<<<<<< HEAD
         if(parseGithubAuthCommand(command)){
             return;
         }
@@ -129,6 +134,24 @@ public class CommandLineInterface {
             return;
         }
         if(parsePullNotesCommand(command)){
+=======
+        if (parseGithubAuthCommand(command)) {
+            return;
+        }
+        if (parsePushNotesCommand(command)) {
+            return;
+        }
+        if (parseShareNotesCommand(command)) {
+            return;
+        }
+        if (parsePullNotesCommand(command)) {
+            return;
+        }
+        if (parseOllamaSearchCommand(command)) {
+            return;
+        }
+        if (parseAddNoteFromOllamaSearchCommand(command)) {
+>>>>>>> main
             return;
         }
         handleInvalidCommand();
@@ -145,8 +168,12 @@ public class CommandLineInterface {
             NoteFactory noteFactory = isImage(noteContent) ? imageNoteFactory : textNoteFactory;
             Note note = noteFactory.createNote(noteContent, noteTag, null, null);
 
+<<<<<<< HEAD
             if (note instanceof ImageNote) {
                 ImageNote imageNote = (ImageNote) note;
+=======
+            if (note instanceof ImageNote imageNote) {
+>>>>>>> main
                 int id = noteManager.addNote(note);
                 LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
                 imageFileManager.createOrUpdateImageNote(imageNote.getPath(), imageNote.getContent(), imageNote.getTag(), imageNote.getParentPageId(), imageNote.getPageId());
@@ -177,16 +204,16 @@ public class CommandLineInterface {
 
         return false;
     }
-    
+
     private boolean parseDeleteNotesByIdCommand(String command) {
         Pattern deleteNoteByIdPattern = Pattern.compile("^sn delete (\\d+)$");
-        Matcher deleteNoteByIdMatcher = deleteNoteByIdPattern.matcher(command); 
-        
+        Matcher deleteNoteByIdMatcher = deleteNoteByIdPattern.matcher(command);
+
         if (deleteNoteByIdMatcher.matches()) {
             try {
                 String noteIdString = deleteNoteByIdMatcher.group(1);
                 int noteId = Integer.parseInt(noteIdString);
-        
+
                 noteManager.deleteNoteByNoteId(noteId);
                 LOGGER.logInfo(MessagesContants.NoteDeletedSuccessfully);
 
@@ -206,7 +233,7 @@ public class CommandLineInterface {
 
         if (exportPDFMatcher.matches()) {
             String filePath = exportPDFMatcher.group(1);
-    
+
             fileHandler.exportPdfFile(filePath, null);
             LOGGER.logInfo(MessagesContants.NoteExportedSuccessfully);
 
@@ -223,7 +250,7 @@ public class CommandLineInterface {
         if (exportPDFUsingTagMatcher.matches()) {
             String filePath = exportPDFUsingTagMatcher.group(2);
             String noteTag = exportPDFUsingTagMatcher.group(1);
-    
+
             fileHandler.exportPdfFile(filePath, noteTag);
             LOGGER.logInfo(MessagesContants.NoteExportedSuccessfully);
             return true;
@@ -239,7 +266,7 @@ public class CommandLineInterface {
         if (exportPDFFilterTagMatcher.matches()) {
             String filePath = exportPDFFilterTagMatcher.group(2);
             String filter = exportPDFFilterTagMatcher.group(1);
-    
+
             fileHandler.exportPdfFileUsingFilter(filePath, filter);
             LOGGER.logInfo(MessagesContants.NoteExportedSuccessfully);
             return true;
@@ -255,11 +282,11 @@ public class CommandLineInterface {
 
         if (getNotionPageContentMatcher.matches()) {
             String pageId = getNotionPageContentMatcher.group(1);
-    
+
             String notionPage = notionApiManager.retrievePageContent(pageId);
             String parentId = notionManager.extractParentPageId(notionPage);
             String content = notionManager.extractPageTitle(notionPage);
-    
+
             // Vérifiez si la page existe déjà dans la base de données
             if (!noteManager.doesNoteExist(pageId)) {
                 NoteFactory noteFactory = isImage(content) ? imageNoteFactory : textNoteFactory;
@@ -281,7 +308,7 @@ public class CommandLineInterface {
         if (updateNotionPageContentnMatcher.matches()) {
             String newContent = updateNotionPageContentnMatcher.group(1);
             String oldContent = updateNotionPageContentnMatcher.group(2);
-    
+
             String pageId = noteManager.getPageId(oldContent);
             if (pageId != null) {
                 noteManager.updateNoteContentInDB(pageId, newContent);
@@ -300,30 +327,30 @@ public class CommandLineInterface {
 
         if (createNotionPageMatcher.matches()) {
             String content = createNotionPageMatcher.group(1);
-    
+
             // Vérifier si l'ID de page parent est déjà enregistré dans la base de données
             String parentPageId = noteManager.getParentPageId(); // Récupérer l'ID de page parent enregistré
-    
+
             if (parentPageId == null) {
                 // Demander à l'utilisateur d'entrer l'ID de la page parent pour la première utilisation
                 LOGGER.logInfo("Veuillez entrer l'ID de la page :");
                 Scanner scanner = InputScanner.getInstance();
                 parentPageId = scanner.nextLine();
-                
+
             }
-    
+
             String propertiesJson = "{ " + "\"parent\": { \"page_id\": \"" + parentPageId + "\"}, " + "\"properties\": { " + "\"title\": [{ \"text\": { \"content\": \"" + content + "\"} }], " + "\"Content\": [{ \"text\": { \"content\": \"Contenu de la note\" } }], " + "\"Tag\": [{ \"text\": { \"content\": \"Tag de la note\" } }] " + "} " + "}";
-    
+
             NoteFactory noteFactory = isImage(content) ? imageNoteFactory : textNoteFactory;
             String newPage = notionApiManager.createNotionPage(parentPageId, propertiesJson);
-    
+
             if (newPage != null && !newPage.isEmpty()) {
                 String newPageId = notionManager.extractNewPageId(newPage);
                 Note note = noteFactory.createNote(content, "notion", parentPageId, newPageId);
                 LOGGER.logInfo(MessagesContants.NoteAddedSuccessufully);
 
                 noteManager.addNote(note);
-    
+
             }
             return true;
         }
@@ -351,10 +378,10 @@ public class CommandLineInterface {
         if (showAllMatcher.matches()) {
             List<Note> showAllNotes = new ArrayList<>();
             showAllNotes = noteManager.showAllNotes();
+            //
             LOGGER.logInfo("Notes :- \\n" + //
-                                "\\n" + //
-                                "\\n" + //
-                                "");
+                    "\\n" + //
+                    "\\n");
 
             showAllNotesDesigner(showAllNotes);
             return true;
@@ -372,28 +399,28 @@ public class CommandLineInterface {
                 String noteContent = addNoteWithReminderMatcher.group(1);
                 String noteTag = addNoteWithReminderMatcher.group(2);
                 String reminder = addNoteWithReminderMatcher.group(3);
-    
+
                 // Création d'une nouvelle note
                 NoteFactory noteFactory = isImage(noteContent) ? imageNoteFactory : textNoteFactory;
                 Note note = noteFactory.createNote(noteContent, noteTag, null, null);
                 int noteId = noteManager.addNote(note);
-    
+
                 DateTimeFormatter userDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
                 LocalDateTime reminderDateTime = LocalDateTime.parse(reminder, userDateTimeFormatter);
-    
+
                 noteManager.addReminder(noteId, reminderDateTime);
-    
+
                 // Formatter pour le format attendu par Google Calendar
                 DateTimeFormatter googleCalendarDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-    
+
                 // Conversion de la date saisie par l'utilisateur au format LocalDateTime
                 LocalDateTime localDateTime = LocalDateTime.parse(reminder, userDateTimeFormatter);
                 String formattedDate = localDateTime.atOffset(ZoneOffset.UTC).format(googleCalendarDateTimeFormatter);
-    
+
                 DateTime startDateTime = new DateTime(formattedDate);
-    
+
                 noteManager.addNoteWithReminderToCalendar(noteContent, startDateTime.toString());
-    
+
                 LOGGER.logInfo(MessagesContants.NoteWithReminderAddedSuccessfully);
 
             } catch (DateTimeParseException e) {
@@ -411,16 +438,16 @@ public class CommandLineInterface {
 
         if (getNoteWithReminderMatcher.matches()) {
             String tag = getNoteWithReminderMatcher.group(1);
-    
+
             List<Note> allNotesByTag = noteManager.getByTag(tag);
-    
+
             if (!allNotesByTag.isEmpty()) {
                 for (Note note : allNotesByTag) {
                     int noteId = note.getId(); // Récupération de l'ID de la note
-    
+
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
                     List<LocalDateTime> reminders = noteManager.getReminders(noteId);
-    
+
                     if (!reminders.isEmpty()) {
                         // Affiche les rappels associés à la note avec le tag spécifique
                         LOGGER.logInfo("Rappels pour la note avec l'ID" + noteId + " " + note.getContent());
@@ -432,7 +459,7 @@ public class CommandLineInterface {
                     } else {
                         // Aucun rappel trouvé pour cette note
                         LOGGER.logInfo("Aucun rappel trouvé pour la note avec l'ID" + noteId + " " + note.getContent());
-                        
+
                     }
                 }
             } else {
@@ -450,9 +477,9 @@ public class CommandLineInterface {
 
         if (deleteReminderForNoteMatcher.matches()) {
             String tag = deleteReminderForNoteMatcher.group(1);
-    
+
             List<Note> allNotesByTag = noteManager.getByTag(tag);
-    
+
             if (!allNotesByTag.isEmpty()) {
                 boolean anyReminderDeleted = false;
                 for (Note note : allNotesByTag) {
@@ -483,7 +510,7 @@ public class CommandLineInterface {
 
         if (exportTXTMatcher.matches()) {
             String filePath = exportTXTMatcher.group(1);
-    
+
             fileHandler.exportToText(filePath);
             LOGGER.logInfo(MessagesContants.NoteExportedSuccessfully);
             return true;
@@ -499,15 +526,15 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithOR.matches()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithOR.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithOR.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithOR.group(2), linkNotesMatcherWithOR.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithOR.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithOR.group(4);
-    
+
             // Assuming noteManager.linkNotes returns an int
             int linkId = noteManager.linkNotesWithOR(noteId, tags, linkName);
             if (linkId == -1) {
@@ -528,15 +555,15 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithAND.matches()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithAND.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithAND.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithAND.group(2), linkNotesMatcherWithAND.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithAND.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithAND.group(4);
-    
+
             // Assuming noteManager.linkNotes returns an int
             int linkId = noteManager.linkNotesWithAND(noteId, tags, linkName);
             if (linkId == -1) {
@@ -557,13 +584,13 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithANDAndAt.find()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithANDAndAt.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithANDAndAt.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithANDAndAt.group(2), linkNotesMatcherWithANDAndAt.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithANDAndAt.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithANDAndAt.group(4);
             String date = linkNotesMatcherWithANDAndAt.group(5);
             // Assuming noteManager.linkNotes returns an int
@@ -586,13 +613,13 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithANDAndBefore.find()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithANDAndBefore.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithANDAndBefore.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithANDAndBefore.group(2), linkNotesMatcherWithANDAndBefore.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithANDAndBefore.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithANDAndBefore.group(4);
             String date = linkNotesMatcherWithANDAndBefore.group(5);
             // Assuming noteManager.linkNotes returns an int
@@ -615,13 +642,13 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithANDAndAfter.find()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithANDAndAfter.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithANDAndAfter.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithANDAndAfter.group(2), linkNotesMatcherWithANDAndAfter.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithANDAndAfter.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithANDAndAfter.group(4);
             String date = linkNotesMatcherWithANDAndAfter.group(5);
             // Assuming noteManager.linkNotes returns an int
@@ -647,7 +674,7 @@ public class CommandLineInterface {
             if (!linkExistenceCheck) {
                 LOGGER.logInfo(MessagesContants.ErrorNoLinkFound + linkName);
 
-            return true;
+                return true;
             }
         }
 
@@ -753,7 +780,10 @@ public class CommandLineInterface {
     }
 
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
     private void handleInvalidCommand() {
         LOGGER.logInfo("Commande invalide. Tapez 'sn --help' pour afficher l'aide.");
     }
@@ -786,6 +816,49 @@ public class CommandLineInterface {
         return filteredNotes;
     }
 
+<<<<<<< HEAD
+=======
+    public boolean parseOllamaSearchCommand(String command) {
+        Pattern ollamaSearchCommandPattern = Pattern.compile("sn --ollama search \"\\s*([^\\s\"].*[^\\s\"])\\s*\"");
+        Matcher ollamaSearchCommandMatcher = ollamaSearchCommandPattern.matcher(command);
+
+        if (ollamaSearchCommandMatcher.matches()) {
+            String searchParameter = ollamaSearchCommandMatcher.group(1);
+            String searchResult = noteManager.searchResultFromOllama(searchParameter);
+            LOGGER.logInfo(searchResult);
+
+            return true;
+        }
+        return false;
+    }
+
+    public boolean parseAddNoteFromOllamaSearchCommand(String command) {
+        Pattern addNoteFromOllamaSearchPattern = Pattern.compile("sn add --from-search \"([^\"]+)\"(?: --tag \"([^\"]+)\")?(?: \"([^\"]+)\")*");
+        Matcher addNoteFromOllamaSearchPatternMatcher = addNoteFromOllamaSearchPattern.matcher(command);
+
+        if (addNoteFromOllamaSearchPatternMatcher.matches()) {
+            String searchId = addNoteFromOllamaSearchPatternMatcher.group(1);
+            if (!searchId.matches("\\d+")) {
+                LOGGER.logInfo(MessagesContants.ErrorInvalidSearchID);
+                return true;
+            }
+            String noteTag = addNoteFromOllamaSearchPatternMatcher.group(2);
+            String noteContent = noteManager.findContentBySearchId(searchId);
+            if (noteContent == null) {
+                LOGGER.logInfo(MessagesContants.ErrorNoResultFound);
+                return true;
+            }
+            NoteFactory noteFactory = textNoteFactory;
+            Note note = noteFactory.createNote(noteContent, noteTag, null, null);
+
+            int id = noteManager.addNote(note);
+            LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
+            return true;
+        }
+        return false;
+    }
+
+>>>>>>> main
     public void displayHelp() {
         LOGGER.logInfo("Bienvenue dans SuperNotes !");
         LOGGER.logInfo("Voici les commandes disponibles :");
@@ -809,6 +882,11 @@ public class CommandLineInterface {
         LOGGER.logInfo("- Pour s'authentifier avec github : sn github auth \"token GitHub\" ");
         LOGGER.logInfo("- Pour synchroniser les notes avec github : sn github push \"nom du fichier.pdf\" ");
         LOGGER.logInfo("- Partager ses notes avec un collaborateur sur Github : sn github share \"repoName\" \"fileName\" \"collaborator\"@");
+<<<<<<< HEAD
+=======
+        LOGGER.logInfo("- Pour effectuer une recherche avec Ollama: sn --ollama search \"term\"");
+        LOGGER.logInfo("- Pour ajouter une note à partir de l'ID du résultat de recherche Ollama : sn add --from-search \"Contenu de la note\" --tag \"Tag de la note\" --reminder \"Date et heure du rappel\"");
+>>>>>>> main
         LOGGER.logInfo("Pour quitter l'application : exit");
     }
 

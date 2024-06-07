@@ -23,6 +23,7 @@ public interface DBManager {
     List<LocalDateTime> getReminders(int noteId);
 
     boolean deleteRemindersByNoteId(int noteId);
+
     int addTextNote(String content, String tag, String parentPageId, String pageId, String time);
 
     int addImageNote(String content, byte[] imageBytes, String tag, String parentPageId, String pageId, String time);
@@ -46,6 +47,7 @@ public interface DBManager {
     boolean doesNoteExist(String pageId);
 
     int linkNotesWithOR(int noteId, String[] tags, String linkName) throws SQLException;
+
     int linkNotesWithAND(int noteId, String[] tags, String linkName) throws SQLException;
 
     int linkNotesWithANDAtDate(int noteId, String[] tags, String linkName, String date) throws SQLException;
@@ -60,5 +62,17 @@ public interface DBManager {
 
     ArrayList<Note> getNotesByType(String type);
 
+<<<<<<< HEAD
 
+=======
+    String searchResultFromOllama(String searchParameter);
+
+    void createOllamaSearchTable();
+
+    String ollamaSearchProcessing(String searchParameter);
+
+    String extractResponseFromJson(String jsonResponse);
+
+    String findContentBySearchId(String searchId);
+>>>>>>> main
 }
