@@ -1,8 +1,19 @@
 package supernotes.management;
 
+import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import supernotes.notes.ImageNote;
 import supernotes.notes.Note;
 import supernotes.notes.TextNote;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.OutputStream;
+import java.net.HttpURLConnection;
+import java.net.URL;
+import java.nio.charset.StandardCharsets;
 import java.sql.*;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -10,13 +21,10 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 public class SQLiteDBManager implements DBManager {
+    public static final String ID_COLUMN_DEFINITION = "id INTEGER PRIMARY KEY AUTOINCREMENT";
     private static final Logger LOGGER = LoggerFactory.getLogger(SQLiteDBManager.class);
     private Connection connection;
-    public static final String ID_COLUMN_DEFINITION = "id INTEGER PRIMARY KEY AUTOINCREMENT";
 
 
     public SQLiteDBManager() {
@@ -33,9 +41,7 @@ public class SQLiteDBManager implements DBManager {
 
     @Override
     public void createNotesTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS notes (" 
-        + SQLiteDBManager.ID_COLUMN_DEFINITION + ","
-        + "type TEXT NOT NULL," + // Champ pour indiquer le type de note (texte ou image)
+        String sql = "CREATE TABLE IF NOT EXISTS notes (" + SQLiteDBManager.ID_COLUMN_DEFINITION + "," + "type TEXT NOT NULL," + // Champ pour indiquer le type de note (texte ou image)
                 "content TEXT," + // Champs pour stocker le contenu texte
                 "image BLOB," + // Champs pour stocker l'image en tant que BLOB
                 "parent_page_id TEXT," + "page_id TEXT," + // Champs pour stocker l'ID de la page
@@ -68,7 +74,7 @@ public class SQLiteDBManager implements DBManager {
 
     @Override
     public void createLinkNotesTable() {
-        String sql = "CREATE TABLE IF NOT EXISTS LinkNotes (" + "id INTEGER PRIMARY KEY AUTOINCREMENT," + "linkname VARCHAR(255)," + "note1_id INTEGER," + "note2_id INTEGER," + "creation_date TEXT," + "FOREIGN KEY (note1_id) REFERENCES Notes(id)," + "FOREIGN KEY (note2_id) REFERENCES Notes(id)" + ")";        
+        String sql = "CREATE TABLE IF NOT EXISTS LinkNotes (" + "id INTEGER PRIMARY KEY AUTOINCREMENT," + "linkname VARCHAR(255)," + "note1_id INTEGER," + "note2_id INTEGER," + "creation_date TEXT," + "FOREIGN KEY (note1_id) REFERENCES Notes(id)," + "FOREIGN KEY (note2_id) REFERENCES Notes(id)" + ")";
         try (Connection conn = getConnection()) {
             if (conn != null) {
                 executeStatement(sql);
@@ -98,12 +104,12 @@ public class SQLiteDBManager implements DBManager {
             LOGGER.error("Une erreur s'est produite.", e);
         }
     }
-    
+
 
     @Override
     public List<LocalDateTime> getReminders(int noteId) {
         List<LocalDateTime> reminders = new ArrayList<>();
-    
+
         String sql = "SELECT reminder_date_time FROM Reminders WHERE note_id = ?";
         try {
             var conn = this.getConnection();
@@ -125,22 +131,22 @@ public class SQLiteDBManager implements DBManager {
         } catch (SQLException e) {
             LOGGER.error("Une erreur s'est produite.", e);
         }
-    
+
         return reminders;
     }
-    
+
 
     @Override
     public boolean deleteRemindersByNoteId(int noteId) {
         String sql = "DELETE FROM reminders WHERE note_id = ?";
         boolean success = false;
-    
+
         try {
             var conn = getConnection();
             if (conn != null) {
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                     pstmt.setInt(1, noteId);
-    
+
                     int rowsAffected = pstmt.executeUpdate();
                     if (rowsAffected > 0) {
                         LOGGER.info("Tous les rappels pour la note avec l'ID {} ont été supprimés avec succès !", noteId);
@@ -153,19 +159,18 @@ public class SQLiteDBManager implements DBManager {
                 LOGGER.info("La connexion à la base de données est nulle.");
             }
         } catch (SQLException e) {
-            LOGGER.info("Erreur lors de la suppression des rappels pour la note avec l'ID {} : {}",noteId ,e.getMessage());
+            LOGGER.info("Erreur lors de la suppression des rappels pour la note avec l'ID {} : {}", noteId, e.getMessage());
         }
-    
+
         return success;
     }
-    
 
 
     @Override
     public int addTextNote(String content, String tag, String parentPageId, String pageId, String time) {
         String sql = "INSERT INTO notes (type, content, parent_page_id, page_id, time) VALUES (?, ?, ?, ?, ?)";
         int noteId = -1;
-    
+
         try {
             var conn = getConnection();
             if (conn != null) {
@@ -175,7 +180,7 @@ public class SQLiteDBManager implements DBManager {
                     pstmt.setString(3, parentPageId);
                     pstmt.setString(4, pageId);
                     pstmt.setString(5, time);
-    
+
                     int rowsInserted = pstmt.executeUpdate();
                     if (rowsInserted > 0) {
                         ResultSet generatedKeys = pstmt.getGeneratedKeys();
@@ -193,10 +198,10 @@ public class SQLiteDBManager implements DBManager {
         } catch (SQLException e) {
             LOGGER.error("Une erreur s'est produite.", e);
         }
-    
+
         return noteId;
     }
-    
+
 
     public int addImageNote(String path, byte[] imageBytes, String tags, String parentPageId, String pageId, String time) {
         String sql = "INSERT INTO notes (type, path, content, parent_page_id, page_id, time) VALUES (?, ?, ?, ?, ?, ?)";
@@ -205,7 +210,8 @@ public class SQLiteDBManager implements DBManager {
         try {
             var conn = getConnection();
             if (conn != null) {
-                try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {            pstmt.setString(1, "image");
+                try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                    pstmt.setString(1, "image");
                     pstmt.setString(2, path);
                     pstmt.setBytes(3, imageBytes);
                     pstmt.setString(4, parentPageId);
@@ -233,22 +239,22 @@ public class SQLiteDBManager implements DBManager {
 
     private List<Integer> addTagsforNotes(String tag) {
         String[] tags = tag.split("\"\\s*\"");
-    
+
         for (int i = 0; i < tags.length; i++) {
             tags[i] = tags[i].replace("\"", "").trim();
         }
-    
+
         List<Integer> tagIds = new ArrayList<>();
-    
+
         var conn = this.getConnection();
         if (conn != null) {
             for (String tempTag : tags) {
                 String sql = "INSERT INTO Tags (tag) VALUES (?)";
-   
+
                 try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
                     pstmt.setString(1, tempTag);
                     pstmt.executeUpdate();
-   
+
                     try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                         if (generatedKeys.next()) {
                             int tagId = generatedKeys.getInt(1);
@@ -264,20 +270,20 @@ public class SQLiteDBManager implements DBManager {
         } else {
             LOGGER.info("La connexion à la base de données est nulle.");
         }
-    
+
         return tagIds;
     }
-    
+
 
     private void addTagsToNote(String tag, int noteId) {
         createTagsTable();
         createNotesTagsTable();
         List<Integer> tempTagIds = addTagsforNotes(tag);
-   
+
         for (Integer tagId : tempTagIds) {
             // Associe les tags à la note dans la table NotesTags
             String sql = "INSERT INTO NotesTags (note_id, tag_id) VALUES (?, ?)";
-   
+
             try {
                 var conn = this.getConnection();
                 if (conn != null) {
@@ -294,7 +300,7 @@ public class SQLiteDBManager implements DBManager {
             }
         }
     }
-    
+
 
     @Override
     public void deleteNoteByNoteId(int noteId) {
@@ -313,27 +319,153 @@ public class SQLiteDBManager implements DBManager {
             LOGGER.error("Une erreur s'est produite.", e);
         }
     }
-    
+
+    @Override
+    public ArrayList<Note> getNotesByType(String type) {
+        String sql = "SELECT * FROM notes WHERE type = ?";
+
+        ArrayList<Note> result = new ArrayList<>();
+
+        try (Connection conn = this.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, type);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    int retrievedNoteId = rs.getInt("id");
+                    String tags = rs.getString("tag_list");
+
+                    if ("text".equals(type)) {
+                        TextNote textNote = new TextNote(rs.getString("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
+                        textNote.setId(retrievedNoteId);
+                        textNote.setTime(rs.getString("time"));
+                        result.add(textNote);
+                    } else if ("image".equals(type)) {
+                        ImageNote imageNote = new ImageNote(rs.getString("path"), rs.getBytes("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
+                        imageNote.setId(retrievedNoteId);
+                        imageNote.setTime(rs.getString("time"));
+                        result.add(imageNote);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Une erreur s'est produite lors de la récupération des notes de type " + type, e);
+        }
+
+        return result;
+    }
+
+    @Override
+    public String searchResultFromOllama(String searchParameter) {
+        try {
+            createOllamaSearchTable();
+            String searchResult = ollamaSearchProcessing(searchParameter);
+            if (!searchResult.isEmpty()) {
+                LocalDateTime dateTime = LocalDateTime.now();
+                DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd MMM yyyy h:mm a");
+                String time = dateTime.format(formatter);
+                int searchId = addSearchResultToTable(searchResult, time);
+                String finalResult = "Search ID : " + searchId + "\nSearch Time : " + time + "\nSearch Result:\n" + searchResult;
+                return finalResult;
+            }
+        } catch (Exception e) {
+            LOGGER.error("Une erreur s'est produite.", e);
+        }
+        return null;
+    }
+
+    private int addSearchResultToTable(String searchResult, String time) {
+        String sql = "INSERT INTO OllamaSearchResults(search_result, time) VALUES (?,?)";
+        int searchId = -1;
+        Connection conn1 = getConnection();
+        try {
+            if (conn1 != null) {
+                try (PreparedStatement pstmt = conn1.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+                    pstmt.setString(1, searchResult);
+                    pstmt.setString(2, time);
+
+                    int rowsInserted = pstmt.executeUpdate();
+                    if (rowsInserted > 0) {
+                        ResultSet generatedKeys = pstmt.getGeneratedKeys();
+                        if (generatedKeys.next()) {
+                            searchId = generatedKeys.getInt(1); // Récupérer l'ID généré
+
+                        }
+                    }
+                }
+            } else {
+                LOGGER.info("La connexion à la base de données est nulle.");
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Une erreur s'est produite.", e);
+        }
+
+        return searchId;
+    }
+
+    @Override
+    public void createOllamaSearchTable() {
+        try {
+            String sql = "CREATE TABLE IF NOT EXISTS OllamaSearchResults (" + "id INTEGER PRIMARY KEY AUTOINCREMENT, " + "search_result TEXT NOT NULL, " + "time TEXT" + ")";
+            executeStatement(sql);
+        } catch (Exception e) {
+            LOGGER.error("Une erreur s'est produite.", e);
+        }
+    }
+
+    @Override
+    public ArrayList<Note> getNoteByNoteId(int noteId) {
+        String sql = "SELECT * FROM notes WHERE id = ?";
+
+        ArrayList<Note> result = new ArrayList<>();
+
+        try (Connection conn = this.getConnection(); PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, noteId);
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String type = rs.getString("type");
+                    int retrievedNoteId = rs.getInt("id");
+                    String tags = rs.getString("tag_list");
+
+                    if ("text".equals(type)) {
+                        TextNote textNote = new TextNote(rs.getString("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
+                        textNote.setId(retrievedNoteId);
+                        textNote.setTime(rs.getString("time"));
+                        result.add(textNote);
+                    } else if ("image".equals(type)) {
+                        ImageNote imageNote = new ImageNote(rs.getString("path"), rs.getBytes("content"), tags, rs.getString("parent_page_id"), rs.getString("page_id"));
+                        imageNote.setId(retrievedNoteId);
+                        imageNote.setTime(rs.getString("time"));
+                        result.add(imageNote);
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.error("Une erreur s'est produite lors de la récupération de la note avec l'ID " + noteId, e);
+        }
+
+        return result;
+    }
+
 
     @Override
     public void deleteNoteByTag(String tag) {
         String deleteNotesSql = "DELETE FROM notes WHERE id IN (SELECT note_id FROM NotesTags WHERE tag_id = (SELECT id FROM Tags WHERE tag = ?))";
         String deleteNotesTagsSql = "DELETE FROM NotesTags WHERE tag_id = (SELECT id FROM Tags WHERE tag = ?)";
-    
+
         try {
             var conn = this.getConnection();
             if (conn != null) {
-                try (PreparedStatement deleteNotesStmt = conn.prepareStatement(deleteNotesSql); 
-                     PreparedStatement deleteNotesTagsStmt = conn.prepareStatement(deleteNotesTagsSql)) {
-    
+                try (PreparedStatement deleteNotesStmt = conn.prepareStatement(deleteNotesSql); PreparedStatement deleteNotesTagsStmt = conn.prepareStatement(deleteNotesTagsSql)) {
+
                     conn.setAutoCommit(false);
-    
+
                     deleteNotesStmt.setString(1, tag);
                     deleteNotesStmt.executeUpdate();
-    
+
                     deleteNotesTagsStmt.setString(1, tag);
                     deleteNotesTagsStmt.executeUpdate();
-    
+
                     conn.commit();
                 }
             } else {
@@ -343,15 +475,11 @@ public class SQLiteDBManager implements DBManager {
             LOGGER.error("Une erreur s'est produite.", e);
         }
     }
-    
+
 
     @Override
     public ArrayList<Note> getAllNotes() {
-        String sql = "SELECT notes.*, GROUP_CONCAT(tags.tag, ',') AS tag_list " +
-                    "FROM notes " +
-                    "LEFT JOIN NotesTags ON notes.id = NotesTags.note_id " +
-                    "LEFT JOIN Tags ON NotesTags.tag_id = Tags.id " +
-                    "GROUP BY notes.id";
+        String sql = "SELECT notes.*, GROUP_CONCAT(tags.tag, ',') AS tag_list " + "FROM notes " + "LEFT JOIN NotesTags ON notes.id = NotesTags.note_id " + "LEFT JOIN Tags ON NotesTags.tag_id = Tags.id " + "GROUP BY notes.id";
 
         var result = new ArrayList<Note>();
 
@@ -400,47 +528,47 @@ public class SQLiteDBManager implements DBManager {
             if (conn != null) {
                 try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-                pstmt.setString(1, linkName.trim()); // Assurez-vous d'utiliser trim() ici
-                try (ResultSet rs = pstmt.executeQuery()) {
+                    pstmt.setString(1, linkName.trim());
+                    try (ResultSet rs = pstmt.executeQuery()) {
 
-                    boolean found = false;
-                    if (!rs.next()) {
-                        return false; // Aucun lien trouvé
-                    }
+                        boolean found = false;
+                        if (!rs.next()) {
+                            return false; // Aucun lien trouvé
+                        }
 
-                    // Variables pour garder la trace des informations précédentes
-                    int tempNoteId = -1; 
-                    String tempDate = null;
+                        // Variables pour garder la trace des informations précédentes
+                        int tempNoteId = -1;
+                        String tempDate = null;
 
-                    do {
-                        int note1Id = rs.getInt("note1_id");
-                        int note2Id = rs.getInt("note2_id");
-                        String creationDate = rs.getString("creation_date"); // Retrieve creation date
+                        do {
+                            int note1Id = rs.getInt("note1_id");
+                            int note2Id = rs.getInt("note2_id");
+                            String creationDate = rs.getString("creation_date"); // Retrieve creation date
 
-                        // Vérifiez si la date de création a changé
-                        if (!creationDate.equals(tempDate)) {
-                            if (tempDate != null) {
-                                LOGGER.info(" "); // Ajouter une ligne vide entre les groupes de dates
+                            // Vérifiez si la date de création a changé
+                            if (!creationDate.equals(tempDate)) {
+                                if (tempDate != null) {
+                                    LOGGER.info(" "); // Ajouter une ligne vide entre les groupes de dates
+                                }
+                                LOGGER.info("Created on : {} ", creationDate);
+                                System.out.print("--------------------------------"); // La longueur de la ligne est fixe
+                                LOGGER.info(" ");
+                                tempDate = creationDate;
                             }
-                            LOGGER.info("Created on : {} ", creationDate);
-                            System.out.print("--------------------------------"); // La longueur de la ligne est fixe
-                            LOGGER.info(" ");
-                            tempDate = creationDate;
-                        }
 
-                        // Vérifiez si l'id de note a changé
-                        if (note1Id != tempNoteId) {
-                            LOGGER.info("note id = {}   --->  id = {}", note1Id, note2Id);
-                            tempNoteId = note1Id;
-                        } else {
-                            // Imprimer des espaces pour aligner les sorties
-                            LOGGER.info("             --->  id = {}", note2Id);
-                        }
-                    } while (rs.next());
+                            // Vérifiez si l'id de note a changé
+                            if (note1Id != tempNoteId) {
+                                LOGGER.info("note id = {}   --->  id = {}", note1Id, note2Id);
+                                tempNoteId = note1Id;
+                            } else {
+                                // Imprimer des espaces pour aligner les sorties
+                                LOGGER.info("             --->  id = {}", note2Id);
+                            }
+                        } while (rs.next());
 
-                    found = true;
-                
-                    return found;
+                        found = true;
+
+                        return found;
                     }
                 }
             } else {
@@ -529,12 +657,11 @@ public class SQLiteDBManager implements DBManager {
     public String getParentPageId() {
         String parentPageId = null;
         String sql = "SELECT parent_page_id FROM notes WHERE parent_page_id IS NOT NULL LIMIT 1";
-    
+
         try {
             var conn = this.getConnection();
             if (conn != null) {
-                try (Statement stmt = conn.createStatement(); 
-                     ResultSet rs = stmt.executeQuery(sql)) {
+                try (Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
                     if (rs.next()) {
                         parentPageId = rs.getString("parent_page_id");
                     }
@@ -545,10 +672,10 @@ public class SQLiteDBManager implements DBManager {
         } catch (SQLException e) {
             LOGGER.error("Une erreur s'est produite.", e);
         }
-    
+
         return parentPageId;
     }
-    
+
 
     @Override
     public String getPageId(String content) {
@@ -571,7 +698,7 @@ public class SQLiteDBManager implements DBManager {
         }
         return null;
     }
-    
+
 
     public void updateNoteContentInDB(String pageId, String newContent) {
         String sql = "UPDATE notes SET content = ? WHERE page_id = ?";
@@ -590,14 +717,14 @@ public class SQLiteDBManager implements DBManager {
             LOGGER.error("Une erreur s'est produite.", e);
         }
     }
-    
+
     public boolean doesNoteExist(String pageId) {
         try (Connection conn = getConnection()) {
             if (conn != null) {
                 try (PreparedStatement preparedStatement = connection.prepareStatement("SELECT COUNT(*) FROM notes WHERE page_id = ?")) {
                     preparedStatement.setString(1, pageId);
-                    
-                    try (ResultSet resultSet = preparedStatement.executeQuery()){
+
+                    try (ResultSet resultSet = preparedStatement.executeQuery()) {
                         if (resultSet.next()) {
                             int count = resultSet.getInt(1);
                             return count > 0; // Si le compte est supérieur à zéro, la note existe
@@ -652,7 +779,7 @@ public class SQLiteDBManager implements DBManager {
                             return count > 0; // Return true if the note exists, false otherwise
                         }
                     }
-                } 
+                }
             } else {
                 LOGGER.info("La connexion à la base de données est nulle.");
             }
@@ -665,7 +792,7 @@ public class SQLiteDBManager implements DBManager {
 
     private List<Integer> findTagIdsWithOR(String[] tags) {
         List<Integer> tagIds = new ArrayList<>();
-    
+
         try {
             StringBuilder orCondition = new StringBuilder();
             for (int i = 0; i < tags.length; i++) {
@@ -674,17 +801,17 @@ public class SQLiteDBManager implements DBManager {
                     orCondition.append(" OR ");
                 }
             }
-    
+
             String sql = "SELECT id FROM Tags WHERE " + orCondition;
-    
+
             try (Connection conn = getConnection()) {
                 if (conn != null) {
                     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
-    
+
                         for (int i = 0; i < tags.length; i++) {
                             stmt.setString(i + 1, tags[i]);
                         }
-    
+
                         try (ResultSet resultSet = stmt.executeQuery()) {
                             while (resultSet.next()) {
                                 tagIds.add(resultSet.getInt("id"));
@@ -698,25 +825,25 @@ public class SQLiteDBManager implements DBManager {
         } catch (SQLException e) {
             LOGGER.error("Une erreur s'est produite.", e);
         }
-    
+
         return tagIds;
     }
-    
+
     private List<Integer> findTagIdsWithAND(String[] tags) {
         List<Integer> tagIds = new ArrayList<>();
-    
+
         try {
             String inClausePlaceholders = String.join(",", Collections.nCopies(tags.length, "?"));
-    
+
             String sql = "SELECT id FROM Tags WHERE tag IN (" + inClausePlaceholders + ")";
-    
+
             try (Connection conn = getConnection()) {
                 if (conn != null) {
                     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                         for (int i = 0; i < tags.length; i++) {
                             stmt.setString(i + 1, tags[i]);
                         }
-    
+
                         try (ResultSet resultSet = stmt.executeQuery()) {
                             while (resultSet.next()) {
                                 tagIds.add(resultSet.getInt("id"));
@@ -730,15 +857,14 @@ public class SQLiteDBManager implements DBManager {
         } catch (SQLException e) {
             LOGGER.error("Une erreur s'est produite.", e);
         }
-    
+
         return tagIds;
     }
-    
 
 
     private List<Integer> findAssociatedNoteIds(List<Integer> tagIds) {
         List<Integer> noteIds = new ArrayList<>();
-    
+
         try {
             StringBuilder orCondition = new StringBuilder();
             for (int i = 0; i < tagIds.size(); i++) {
@@ -747,16 +873,16 @@ public class SQLiteDBManager implements DBManager {
                     orCondition.append(" OR ");
                 }
             }
-    
+
             String sql = "SELECT DISTINCT(note_id) FROM NotesTags WHERE " + orCondition;
-    
+
             try (Connection conn = getConnection()) {
                 if (conn != null) {
                     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                         for (int i = 0; i < tagIds.size(); i++) {
                             stmt.setInt(i + 1, tagIds.get(i));
                         }
-    
+
                         try (ResultSet resultSet = stmt.executeQuery()) {
                             while (resultSet.next()) {
                                 noteIds.add(resultSet.getInt("note_id"));
@@ -770,21 +896,21 @@ public class SQLiteDBManager implements DBManager {
         } catch (SQLException e) {
             LOGGER.info("Aucun enregistrement trouvé pour les balises");
         }
-    
+
         return noteIds;
     }
-    
+
 
     public int insertLinkNotes(int noteId1, List<Integer> noteId2List, String linkName, String creationDate) {
         int linkId = -1;
-    
+
         try (Connection conn = getConnection()) {
             if (conn != null) {
                 conn.setAutoCommit(false);
-    
+
                 try {
                     String insertSql = "INSERT INTO LinkNotes (linkname, note1_id, note2_id, creation_date) VALUES (?, ?, ?, ?)";
-    
+
                     try (PreparedStatement insertStatement = conn.prepareStatement(insertSql, Statement.RETURN_GENERATED_KEYS)) {
                         for (int noteId2 : noteId2List) {
                             insertStatement.setString(1, linkName);
@@ -793,15 +919,15 @@ public class SQLiteDBManager implements DBManager {
                             insertStatement.setString(4, creationDate);
                             insertStatement.addBatch();
                         }
-    
+
                         insertStatement.executeBatch();
-    
+
                         try (ResultSet generatedKeys = insertStatement.getGeneratedKeys()) {
                             if (generatedKeys.next()) {
                                 linkId = generatedKeys.getInt(1);
                             }
                         }
-    
+
                         conn.commit();
                     }
                 } catch (SQLException e) {
@@ -816,10 +942,10 @@ public class SQLiteDBManager implements DBManager {
             LOGGER.info("Erreur lors de l'établissement de la connexion à la base de données : {} ", e.getMessage());
             LOGGER.error("Une erreur s'est produite. ", e);
         }
-    
+
         return linkId;
     }
-    
+
 
     @Override
     public int linkNotesWithAND(int noteId, String[] tags, String linkName) throws SQLException {
@@ -864,7 +990,7 @@ public class SQLiteDBManager implements DBManager {
         List<Integer> associatedNoteIds = findAssociatedNoteIds(tagIds);
         List<Integer> associatednoteIdsAtDate = findAssociatedNoteIdsAtDate(associatedNoteIds, date);
         if (associatednoteIdsAtDate.isEmpty()) {
-            LOGGER.info("Aucune donnée n'existe pour la date: {} " , date);
+            LOGGER.info("Aucune donnée n'existe pour la date: {} ", date);
             return linkId;
         }
         LocalDateTime dateTime = LocalDateTime.now();
@@ -893,7 +1019,7 @@ public class SQLiteDBManager implements DBManager {
         List<Integer> associatedNoteIds = findAssociatedNoteIds(tagIds);
         List<Integer> associatednoteIdsBeforeDate = findAssociatedNoteIdsBeforeDate(associatedNoteIds, date);
         if (associatednoteIdsBeforeDate.isEmpty()) {
-            LOGGER.info("Aucune donnée n'existe avant la date: {} " , date);
+            LOGGER.info("Aucune donnée n'existe avant la date: {} ", date);
             return linkId;
         }
         LocalDateTime dateTime = LocalDateTime.now();
@@ -937,20 +1063,20 @@ public class SQLiteDBManager implements DBManager {
 
     private List<Integer> findAssociatedNoteIdsAtDate(List<Integer> noteIds, String date) {
         List<Integer> matchingNoteIds = new ArrayList<>();
-    
+
         try {
             String sql = "SELECT id FROM notes WHERE " + "substr(time, 8, 4) || '-' || " + "CASE substr(time, 4, 3) " + "   WHEN 'Jan' THEN '01' " + "   WHEN 'Feb' THEN '02' " + "   WHEN 'Mar' THEN '03' " + "   WHEN 'Apr' THEN '04' " + "   WHEN 'May' THEN '05' " + "   WHEN 'Jun' THEN '06' " + "   WHEN 'Jul' THEN '07' " + "   WHEN 'Aug' THEN '08' " + "   WHEN 'Sep' THEN '09' " + "   WHEN 'Oct' THEN '10' " + "   WHEN 'Nov' THEN '11' " + "   WHEN 'Dec' THEN '12' " + "END || '-' || substr(time, 1, 2) = ? AND id IN (" + String.join(",", Collections.nCopies(noteIds.size(), "?")) + ")";
-    
+
             try (Connection conn = getConnection()) {
                 if (conn != null) {
                     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                         stmt.setString(1, date);
-    
+
                         // Set parameters for note IDs
                         for (int i = 0; i < noteIds.size(); i++) {
                             stmt.setInt(i + 2, noteIds.get(i));
                         }
-    
+
                         try (ResultSet resultSet = stmt.executeQuery()) {
                             while (resultSet.next()) {
                                 matchingNoteIds.add(resultSet.getInt("id"));
@@ -964,27 +1090,27 @@ public class SQLiteDBManager implements DBManager {
         } catch (SQLException e) {
             LOGGER.error("Une erreur s'est produite.", e);
         }
-    
+
         return matchingNoteIds;
     }
-    
+
 
     private List<Integer> findAssociatedNoteIdsBeforeDate(List<Integer> noteIds, String date) {
         List<Integer> matchingNoteIds = new ArrayList<>();
-    
+
         try {
             String sql = "SELECT id FROM notes WHERE " + "substr(time, 8, 4) || '-' || " + "CASE substr(time, 4, 3) " + "   WHEN 'Jan' THEN '01' " + "   WHEN 'Feb' THEN '02' " + "   WHEN 'Mar' THEN '03' " + "   WHEN 'Apr' THEN '04' " + "   WHEN 'May' THEN '05' " + "   WHEN 'Jun' THEN '06' " + "   WHEN 'Jul' THEN '07' " + "   WHEN 'Aug' THEN '08' " + "   WHEN 'Sep' THEN '09' " + "   WHEN 'Oct' THEN '10' " + "   WHEN 'Nov' THEN '11' " + "   WHEN 'Dec' THEN '12' " + "END || '-' || substr(time, 1, 2) < ? AND id IN (" + String.join(",", Collections.nCopies(noteIds.size(), "?")) + ")";
-    
+
             try (Connection conn = getConnection()) {
                 if (conn != null) {
                     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                         stmt.setString(1, date);
-    
+
                         // Set parameters for note IDs
                         for (int i = 0; i < noteIds.size(); i++) {
                             stmt.setInt(i + 2, noteIds.get(i));
                         }
-    
+
                         try (ResultSet resultSet = stmt.executeQuery()) {
                             while (resultSet.next()) {
                                 matchingNoteIds.add(resultSet.getInt("id"));
@@ -998,42 +1124,26 @@ public class SQLiteDBManager implements DBManager {
         } catch (SQLException e) {
             LOGGER.error("Une erreur s'est produite.", e);
         }
-    
+
         return matchingNoteIds;
     }
-    
+
     private List<Integer> findAssociatedNoteIdsAfterDate(List<Integer> noteIds, String date) {
         List<Integer> matchingNoteIds = new ArrayList<>();
-    
+
         try {
-            String sql = "SELECT id FROM notes WHERE " + 
-                    "substr(time, 8, 4) || '-' || " + 
-                    "CASE substr(time, 4, 3) " + 
-                    "   WHEN 'Jan' THEN '01' " + 
-                    "   WHEN 'Feb' THEN '02' " + 
-                    "   WHEN 'Mar' THEN '03' " + 
-                    "   WHEN 'Apr' THEN '04' " + 
-                    "   WHEN 'May' THEN '05' " + 
-                    "   WHEN 'Jun' THEN '06' " + 
-                    "   WHEN 'Jul' THEN '07' " + 
-                    "   WHEN 'Aug' THEN '08' " + 
-                    "   WHEN 'Sep' THEN '09' " + 
-                    "   WHEN 'Oct' THEN '10' " + 
-                    "   WHEN 'Nov' THEN '11' " + 
-                    "   WHEN 'Dec' THEN '12' " + 
-                    "END || '-' || substr(time, 1, 2) > ? AND id IN (" + 
-                    String.join(",", Collections.nCopies(noteIds.size(), "?")) + ")";
-    
+            String sql = "SELECT id FROM notes WHERE " + "substr(time, 8, 4) || '-' || " + "CASE substr(time, 4, 3) " + "   WHEN 'Jan' THEN '01' " + "   WHEN 'Feb' THEN '02' " + "   WHEN 'Mar' THEN '03' " + "   WHEN 'Apr' THEN '04' " + "   WHEN 'May' THEN '05' " + "   WHEN 'Jun' THEN '06' " + "   WHEN 'Jul' THEN '07' " + "   WHEN 'Aug' THEN '08' " + "   WHEN 'Sep' THEN '09' " + "   WHEN 'Oct' THEN '10' " + "   WHEN 'Nov' THEN '11' " + "   WHEN 'Dec' THEN '12' " + "END || '-' || substr(time, 1, 2) > ? AND id IN (" + String.join(",", Collections.nCopies(noteIds.size(), "?")) + ")";
+
             try (Connection conn = getConnection()) {
                 if (conn != null) {
                     try (PreparedStatement stmt = conn.prepareStatement(sql)) {
                         stmt.setString(1, date);
-    
+
                         // Set parameters for note IDs
                         for (int i = 0; i < noteIds.size(); i++) {
                             stmt.setInt(i + 2, noteIds.get(i));
                         }
-    
+
                         try (ResultSet resultSet = stmt.executeQuery()) {
                             while (resultSet.next()) {
                                 matchingNoteIds.add(resultSet.getInt("id"));
@@ -1045,12 +1155,12 @@ public class SQLiteDBManager implements DBManager {
                 }
             }
         } catch (SQLException e) {
-            LOGGER.info("Une erreur SQL s'est produite : {}" , e.getMessage());
+            LOGGER.info("Une erreur SQL s'est produite : {}", e.getMessage());
         }
-    
+
         return matchingNoteIds;
     }
-    
+
 
     private void connect() {
         try {
@@ -1076,5 +1186,77 @@ public class SQLiteDBManager implements DBManager {
         }
 
         return connection;
+    }
+
+    @Override
+    public String ollamaSearchProcessing(String searchParameter) {
+        HttpURLConnection urlConnection = null; // Declare the variable outside the try block
+        try {
+            URL url = new URL("http://localhost:11434/api/generate");
+
+            urlConnection = (HttpURLConnection) url.openConnection();
+            urlConnection.setRequestMethod("POST");
+            urlConnection.setRequestProperty("Content-Type", "application/json");
+            urlConnection.setRequestProperty("Accept", "application/json");
+            urlConnection.setDoOutput(true);
+            urlConnection.setDoInput(true);
+
+            String postData = "{\"model\": \"llama2\", \"prompt\": \"" + searchParameter + "\", \"stream\": false}";
+
+            try (OutputStream os = urlConnection.getOutputStream()) {
+                byte[] input = postData.getBytes(StandardCharsets.UTF_8);
+                os.write(input, 0, input.length);
+            }
+
+            BufferedReader reader = new BufferedReader(new InputStreamReader(urlConnection.getInputStream()));
+            StringBuilder responseBuilder = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                responseBuilder.append(line);
+            }
+            String response = extractResponseFromJson(responseBuilder.toString());
+            return response;
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        } finally {
+            if (urlConnection != null) {
+                urlConnection.disconnect();
+            }
+        }
+        return null;
+    }
+
+    @Override
+    public String extractResponseFromJson(String jsonResponse) {
+        JSONObject jsonObject = new JSONObject(jsonResponse);
+        String response = jsonObject.getString("response");
+
+        return response;
+    }
+
+    @Override
+    public String findContentBySearchId(String searchId) {
+        String searchContent = null;
+        try {
+            createOllamaSearchTable();
+            String sql = "SELECT search_result FROM OllamaSearchResults WHERE id = ?";
+
+            try (Connection newConn = getConnection();
+                 PreparedStatement statement = newConn.prepareStatement(sql)) {
+
+                statement.setString(1, searchId);
+
+                try (ResultSet resultSet = statement.executeQuery()) {
+                    if (resultSet.next()) {
+                        searchContent = resultSet.getString("search_result");
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            LOGGER.error("An error occurred while finding content by search ID", e);
+        }
+
+        return searchContent;
     }
 }

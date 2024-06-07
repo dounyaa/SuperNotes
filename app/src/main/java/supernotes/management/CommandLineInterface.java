@@ -1,9 +1,13 @@
 package supernotes.management;
 
 import com.google.api.client.util.DateTime;
-
 import supernotes.constants.MessagesContants;
 import supernotes.file_handling.FileHandler;
+import supernotes.file_handling.ImageFileManager;
+import supernotes.githubsync.GitHubAuthenticator;
+import supernotes.githubsync.GitHubNotePuller;
+import supernotes.githubsync.GitHubRepositoryHandler;
+import supernotes.githubsync.GitHubRepositoryManager;
 import supernotes.helpers.InputScanner;
 import supernotes.helpers.MyLogger;
 import supernotes.notes.ImageNote;
@@ -12,42 +16,46 @@ import supernotes.notes.NoteFactory;
 import supernotes.notionAPI.NotionApiManager;
 import supernotes.notionAPI.NotionManager;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Scanner;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
-import javax.swing.*;
-
 public class CommandLineInterface {
+    private static final MyLogger LOGGER = MyLogger.getInstance();
     private final NoteFactory textNoteFactory;
     private final NoteFactory imageNoteFactory;
     private final FileHandler fileHandler;
     private final NoteManager noteManager;
     private final NotionApiManager notionApiManager;
     private final NotionManager notionManager;
-    private static final MyLogger LOGGER = MyLogger.getInstance();
+    private final GitHubRepositoryManager repositoryManager;
+    private final GitHubRepositoryHandler repositoryHandler;
+    private final ImageFileManager imageFileManager;
+    private final GitHubNotePuller gitHubNotePuller;
 
-
-    public CommandLineInterface(NoteFactory textNoteFactory, NoteFactory imageNoteFactory, FileHandler fileHandler, NotionManager notionManager, NotionApiManager notionApiManager) {
+    public CommandLineInterface(NoteFactory textNoteFactory, NoteFactory imageNoteFactory, FileHandler fileHandler, NotionManager notionManager, NotionApiManager notionApiManager, GitHubRepositoryManager repositoryManager, GitHubRepositoryHandler repositoryHandler, ImageFileManager imageFileManager, GitHubNotePuller gitHubNotePuller) {
         this.textNoteFactory = textNoteFactory;
         this.imageNoteFactory = imageNoteFactory;
         this.fileHandler = fileHandler;
+        this.repositoryManager = repositoryManager;
+        this.repositoryHandler = repositoryHandler;
+        this.imageFileManager = imageFileManager;
+        this.gitHubNotePuller = gitHubNotePuller;
         this.noteManager = new NoteManagerDataBase();
         this.notionApiManager = notionApiManager;
         this.notionManager = notionManager;
     }
 
-    public void parseCommand(String command) throws SQLException {        
+    public void parseCommand(String command) throws SQLException {
         if (parseAddNoteCommand(command)) {
             return;
         }
@@ -111,7 +119,24 @@ public class CommandLineInterface {
         if (parseShowAllLinksByNameCommand(command)) {
             return;
         }
-
+        if (parseGithubAuthCommand(command)) {
+            return;
+        }
+        if (parsePushNotesCommand(command)) {
+            return;
+        }
+        if (parseShareNotesCommand(command)) {
+            return;
+        }
+        if (parsePullNotesCommand(command)) {
+            return;
+        }
+        if (parseOllamaSearchCommand(command)) {
+            return;
+        }
+        if (parseAddNoteFromOllamaSearchCommand(command)) {
+            return;
+        }
         handleInvalidCommand();
     }
 
@@ -126,14 +151,21 @@ public class CommandLineInterface {
             NoteFactory noteFactory = isImage(noteContent) ? imageNoteFactory : textNoteFactory;
             Note note = noteFactory.createNote(noteContent, noteTag, null, null);
 
-            int id = noteManager.addNote(note);
-            LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
+            if (note instanceof ImageNote imageNote) {
+                int id = noteManager.addNote(note);
+                LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
+                imageFileManager.createOrUpdateImageNote(imageNote.getPath(), imageNote.getContent(), imageNote.getTag(), imageNote.getParentPageId(), imageNote.getPageId());
+            } else {
+                int id = noteManager.addNote(note);
+                LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
+            }
 
             return true;
         }
 
         return false;
     }
+
 
     public boolean parseDeleteNotesByTagCommand(String command) {
         Pattern deleteNotesPattern = Pattern.compile("^sn delete --tag \"(.*)\"$");
@@ -150,16 +182,16 @@ public class CommandLineInterface {
 
         return false;
     }
-    
+
     private boolean parseDeleteNotesByIdCommand(String command) {
         Pattern deleteNoteByIdPattern = Pattern.compile("^sn delete (\\d+)$");
-        Matcher deleteNoteByIdMatcher = deleteNoteByIdPattern.matcher(command); 
-        
+        Matcher deleteNoteByIdMatcher = deleteNoteByIdPattern.matcher(command);
+
         if (deleteNoteByIdMatcher.matches()) {
             try {
                 String noteIdString = deleteNoteByIdMatcher.group(1);
                 int noteId = Integer.parseInt(noteIdString);
-        
+
                 noteManager.deleteNoteByNoteId(noteId);
                 LOGGER.logInfo(MessagesContants.NoteDeletedSuccessfully);
 
@@ -179,7 +211,7 @@ public class CommandLineInterface {
 
         if (exportPDFMatcher.matches()) {
             String filePath = exportPDFMatcher.group(1);
-    
+
             fileHandler.exportPdfFile(filePath, null);
             LOGGER.logInfo(MessagesContants.NoteExportedSuccessfully);
 
@@ -196,7 +228,7 @@ public class CommandLineInterface {
         if (exportPDFUsingTagMatcher.matches()) {
             String filePath = exportPDFUsingTagMatcher.group(2);
             String noteTag = exportPDFUsingTagMatcher.group(1);
-    
+
             fileHandler.exportPdfFile(filePath, noteTag);
             LOGGER.logInfo(MessagesContants.NoteExportedSuccessfully);
             return true;
@@ -212,7 +244,7 @@ public class CommandLineInterface {
         if (exportPDFFilterTagMatcher.matches()) {
             String filePath = exportPDFFilterTagMatcher.group(2);
             String filter = exportPDFFilterTagMatcher.group(1);
-    
+
             fileHandler.exportPdfFileUsingFilter(filePath, filter);
             LOGGER.logInfo(MessagesContants.NoteExportedSuccessfully);
             return true;
@@ -228,11 +260,11 @@ public class CommandLineInterface {
 
         if (getNotionPageContentMatcher.matches()) {
             String pageId = getNotionPageContentMatcher.group(1);
-    
+
             String notionPage = notionApiManager.retrievePageContent(pageId);
             String parentId = notionManager.extractParentPageId(notionPage);
             String content = notionManager.extractPageTitle(notionPage);
-    
+
             // Vérifiez si la page existe déjà dans la base de données
             if (!noteManager.doesNoteExist(pageId)) {
                 NoteFactory noteFactory = isImage(content) ? imageNoteFactory : textNoteFactory;
@@ -254,7 +286,7 @@ public class CommandLineInterface {
         if (updateNotionPageContentnMatcher.matches()) {
             String newContent = updateNotionPageContentnMatcher.group(1);
             String oldContent = updateNotionPageContentnMatcher.group(2);
-    
+
             String pageId = noteManager.getPageId(oldContent);
             if (pageId != null) {
                 noteManager.updateNoteContentInDB(pageId, newContent);
@@ -273,30 +305,30 @@ public class CommandLineInterface {
 
         if (createNotionPageMatcher.matches()) {
             String content = createNotionPageMatcher.group(1);
-    
+
             // Vérifier si l'ID de page parent est déjà enregistré dans la base de données
             String parentPageId = noteManager.getParentPageId(); // Récupérer l'ID de page parent enregistré
-    
+
             if (parentPageId == null) {
                 // Demander à l'utilisateur d'entrer l'ID de la page parent pour la première utilisation
                 LOGGER.logInfo("Veuillez entrer l'ID de la page :");
                 Scanner scanner = InputScanner.getInstance();
                 parentPageId = scanner.nextLine();
-                
+
             }
-    
+
             String propertiesJson = "{ " + "\"parent\": { \"page_id\": \"" + parentPageId + "\"}, " + "\"properties\": { " + "\"title\": [{ \"text\": { \"content\": \"" + content + "\"} }], " + "\"Content\": [{ \"text\": { \"content\": \"Contenu de la note\" } }], " + "\"Tag\": [{ \"text\": { \"content\": \"Tag de la note\" } }] " + "} " + "}";
-    
+
             NoteFactory noteFactory = isImage(content) ? imageNoteFactory : textNoteFactory;
             String newPage = notionApiManager.createNotionPage(parentPageId, propertiesJson);
-    
+
             if (newPage != null && !newPage.isEmpty()) {
                 String newPageId = notionManager.extractNewPageId(newPage);
                 Note note = noteFactory.createNote(content, "notion", parentPageId, newPageId);
                 LOGGER.logInfo(MessagesContants.NoteAddedSuccessufully);
 
                 noteManager.addNote(note);
-    
+
             }
             return true;
         }
@@ -324,10 +356,10 @@ public class CommandLineInterface {
         if (showAllMatcher.matches()) {
             List<Note> showAllNotes = new ArrayList<>();
             showAllNotes = noteManager.showAllNotes();
+            //
             LOGGER.logInfo("Notes :- \\n" + //
-                                "\\n" + //
-                                "\\n" + //
-                                "");
+                    "\\n" + //
+                    "\\n");
 
             showAllNotesDesigner(showAllNotes);
             return true;
@@ -345,28 +377,28 @@ public class CommandLineInterface {
                 String noteContent = addNoteWithReminderMatcher.group(1);
                 String noteTag = addNoteWithReminderMatcher.group(2);
                 String reminder = addNoteWithReminderMatcher.group(3);
-    
+
                 // Création d'une nouvelle note
                 NoteFactory noteFactory = isImage(noteContent) ? imageNoteFactory : textNoteFactory;
                 Note note = noteFactory.createNote(noteContent, noteTag, null, null);
                 int noteId = noteManager.addNote(note);
-    
+
                 DateTimeFormatter userDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
                 LocalDateTime reminderDateTime = LocalDateTime.parse(reminder, userDateTimeFormatter);
-    
+
                 noteManager.addReminder(noteId, reminderDateTime);
-    
+
                 // Formatter pour le format attendu par Google Calendar
                 DateTimeFormatter googleCalendarDateTimeFormatter = DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss'Z'");
-    
+
                 // Conversion de la date saisie par l'utilisateur au format LocalDateTime
                 LocalDateTime localDateTime = LocalDateTime.parse(reminder, userDateTimeFormatter);
                 String formattedDate = localDateTime.atOffset(ZoneOffset.UTC).format(googleCalendarDateTimeFormatter);
-    
+
                 DateTime startDateTime = new DateTime(formattedDate);
-    
+
                 noteManager.addNoteWithReminderToCalendar(noteContent, startDateTime.toString());
-    
+
                 LOGGER.logInfo(MessagesContants.NoteWithReminderAddedSuccessfully);
 
             } catch (DateTimeParseException e) {
@@ -384,16 +416,16 @@ public class CommandLineInterface {
 
         if (getNoteWithReminderMatcher.matches()) {
             String tag = getNoteWithReminderMatcher.group(1);
-    
+
             List<Note> allNotesByTag = noteManager.getByTag(tag);
-    
+
             if (!allNotesByTag.isEmpty()) {
                 for (Note note : allNotesByTag) {
                     int noteId = note.getId(); // Récupération de l'ID de la note
-    
+
                     DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
                     List<LocalDateTime> reminders = noteManager.getReminders(noteId);
-    
+
                     if (!reminders.isEmpty()) {
                         // Affiche les rappels associés à la note avec le tag spécifique
                         LOGGER.logInfo("Rappels pour la note avec l'ID" + noteId + " " + note.getContent());
@@ -405,7 +437,7 @@ public class CommandLineInterface {
                     } else {
                         // Aucun rappel trouvé pour cette note
                         LOGGER.logInfo("Aucun rappel trouvé pour la note avec l'ID" + noteId + " " + note.getContent());
-                        
+
                     }
                 }
             } else {
@@ -423,9 +455,9 @@ public class CommandLineInterface {
 
         if (deleteReminderForNoteMatcher.matches()) {
             String tag = deleteReminderForNoteMatcher.group(1);
-    
+
             List<Note> allNotesByTag = noteManager.getByTag(tag);
-    
+
             if (!allNotesByTag.isEmpty()) {
                 boolean anyReminderDeleted = false;
                 for (Note note : allNotesByTag) {
@@ -456,7 +488,7 @@ public class CommandLineInterface {
 
         if (exportTXTMatcher.matches()) {
             String filePath = exportTXTMatcher.group(1);
-    
+
             fileHandler.exportToText(filePath);
             LOGGER.logInfo(MessagesContants.NoteExportedSuccessfully);
             return true;
@@ -472,15 +504,15 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithOR.matches()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithOR.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithOR.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithOR.group(2), linkNotesMatcherWithOR.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithOR.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithOR.group(4);
-    
+
             // Assuming noteManager.linkNotes returns an int
             int linkId = noteManager.linkNotesWithOR(noteId, tags, linkName);
             if (linkId == -1) {
@@ -501,15 +533,15 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithAND.matches()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithAND.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithAND.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithAND.group(2), linkNotesMatcherWithAND.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithAND.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithAND.group(4);
-    
+
             // Assuming noteManager.linkNotes returns an int
             int linkId = noteManager.linkNotesWithAND(noteId, tags, linkName);
             if (linkId == -1) {
@@ -530,13 +562,13 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithANDAndAt.find()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithANDAndAt.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithANDAndAt.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithANDAndAt.group(2), linkNotesMatcherWithANDAndAt.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithANDAndAt.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithANDAndAt.group(4);
             String date = linkNotesMatcherWithANDAndAt.group(5);
             // Assuming noteManager.linkNotes returns an int
@@ -559,13 +591,13 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithANDAndBefore.find()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithANDAndBefore.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithANDAndBefore.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithANDAndBefore.group(2), linkNotesMatcherWithANDAndBefore.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithANDAndBefore.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithANDAndBefore.group(4);
             String date = linkNotesMatcherWithANDAndBefore.group(5);
             // Assuming noteManager.linkNotes returns an int
@@ -588,13 +620,13 @@ public class CommandLineInterface {
         if (linkNotesMatcherWithANDAndAfter.find()) {
             int noteId = Integer.parseInt(linkNotesMatcherWithANDAndAfter.group(1));
             String[] tags;
-    
+
             if (linkNotesMatcherWithANDAndAfter.group(3) != null) {
                 tags = new String[]{linkNotesMatcherWithANDAndAfter.group(2), linkNotesMatcherWithANDAndAfter.group(3)};
             } else {
                 tags = new String[]{linkNotesMatcherWithANDAndAfter.group(2)};
             }
-    
+
             String linkName = linkNotesMatcherWithANDAndAfter.group(4);
             String date = linkNotesMatcherWithANDAndAfter.group(5);
             // Assuming noteManager.linkNotes returns an int
@@ -620,12 +652,111 @@ public class CommandLineInterface {
             if (!linkExistenceCheck) {
                 LOGGER.logInfo(MessagesContants.ErrorNoLinkFound + linkName);
 
-            return true;
+                return true;
             }
         }
 
         return false;
     }
+
+    private boolean parseGithubAuthCommand(String command) {
+        Pattern GithubAuthCommandPattern = Pattern.compile("sn github auth \"([^\"]+)\"");
+        Matcher GithubAuthCommandMatcher = GithubAuthCommandPattern.matcher(command);
+
+        if (GithubAuthCommandMatcher.matches()) {
+            String token = GithubAuthCommandMatcher.group(1);
+            GitHubAuthenticator.setAuthToken(token);
+            boolean authenticated = GitHubAuthenticator.authenticate(token);
+            if (authenticated) {
+                System.out.println("L'authentification GitHub a réussi !");
+            } else {
+                System.out.println("L'authentification GitHub a échoué !");
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    public boolean parsePushNotesCommand(String command) {
+        Pattern githubPushNotesCommandPattern = Pattern.compile("sn github push \"([^\"]+)\"");
+        Matcher githubPushNotesCommandMatcher = githubPushNotesCommandPattern.matcher(command);
+
+        if (githubPushNotesCommandMatcher.matches()) {
+            String asciiDocFileName = githubPushNotesCommandMatcher.group(1);
+            if (repositoryManager != null) {
+                List<Note> notesList = noteManager.showAllNotes();
+                ArrayList<Note> notes = new ArrayList<>(notesList);
+
+                try {
+                    String repoName = repositoryManager.getUsername().toLowerCase() + "-notes"; // Utilisez le nom d'utilisateur comme nom du référentiel
+                    repositoryManager.uploadNotesAsAsciiDoc(notes, asciiDocFileName, repoName);
+                    return true;
+                } catch (IOException e) {
+                    System.out.println("Erreur lors de la sauvegarde des notes sur GitHub : " + e.getMessage());
+                }
+            } else {
+                System.out.println("Erreur : Aucun référentiel GitHub privé trouvé. Veuillez vous authentifier d'abord.");
+            }
+        }
+
+        return false;
+    }
+
+    public boolean parseShareNotesCommand(String command) {
+        Pattern githubPushNotesCommandPattern = Pattern.compile("sn github share \"([^\"]+)\" \"([^\"]+)\" \"([^\"]+)\"( --filtre \"([^\"]+)\")?");
+        Matcher githubPushNotesCommandMatcher = githubPushNotesCommandPattern.matcher(command);
+
+        if (githubPushNotesCommandMatcher.matches()) {
+            String repoName = githubPushNotesCommandMatcher.group(1);
+            String fileName = githubPushNotesCommandMatcher.group(2);
+            String collaboratorsString = githubPushNotesCommandMatcher.group(3);
+            String filterOption = githubPushNotesCommandMatcher.group(5);
+
+            // Convertir la liste de collaborateurs en une liste
+            List<String> collaborators = Arrays.asList(collaboratorsString.split("\\s+"));
+
+
+            List<Note> filteredNotes = null;
+
+            if (filterOption != null) {
+                // Traitement du filtre
+                String[] filterParts = filterOption.split(" ");
+                String filterType = filterParts[0];
+                String filterValue = filterParts[1];
+                filteredNotes = filterNotes(filterType, filterValue);
+            } else {
+                // Si aucun filtre n'est spécifié, récupérer toutes les notes
+                filteredNotes = noteManager.showAllNotes();
+            }
+
+            if (repositoryHandler != null) {
+                ArrayList<Note> notes = new ArrayList<>(filteredNotes);
+                repositoryHandler.createRepository(repoName, notes, fileName, collaborators);
+                return true;
+            } else {
+                System.out.println("Erreur : Aucun gestionnaire de référentiel GitHub trouvé. Veuillez vous authentifier d'abord.");
+            }
+        }
+        return false;
+    }
+
+
+    public boolean parsePullNotesCommand(String command) {
+        Pattern githubPullNotesCommandPattern = Pattern.compile("sn github pull \"([^\"]+)\" \"([^\"]+)\"");
+        Matcher githubPullNotesCommandMatcher = githubPullNotesCommandPattern.matcher(command);
+
+        if (githubPullNotesCommandMatcher.matches()) {
+            String repoName = githubPullNotesCommandMatcher.group(1);
+            String fileName = githubPullNotesCommandMatcher.group(2);
+
+            gitHubNotePuller.pullNotesFromGitHub(repoName, fileName);
+
+            return true;
+        }
+        return false;
+    }
+
 
     private void handleInvalidCommand() {
         LOGGER.logInfo("Commande invalide. Tapez 'sn --help' pour afficher l'aide.");
@@ -633,6 +764,70 @@ public class CommandLineInterface {
 
     private boolean isImage(String path) {
         return path.endsWith(".jpg") || path.endsWith(".png") || path.endsWith(".gif");
+    }
+
+    private List<Note> filterNotes(String filterType, String filterValue) {
+        List<Note> filteredNotes = new ArrayList<>();
+
+        switch (filterType) {
+            case "--id":
+                filteredNotes.addAll(noteManager.getNoteByNoteId(Integer.parseInt(filterValue)));
+                break;
+            case "--tag":
+                filteredNotes.addAll(noteManager.getByTag(filterValue));
+                break;
+            case "--word":
+                filteredNotes.addAll(noteManager.getAllNotesLike(filterValue));
+                break;
+            case "--type":
+                filteredNotes.addAll(noteManager.getNotesByType(filterValue));
+                break;
+            default:
+                System.out.println("Filtre non pris en charge : " + filterType);
+                break;
+        }
+
+        return filteredNotes;
+    }
+
+    public boolean parseOllamaSearchCommand(String command) {
+        Pattern ollamaSearchCommandPattern = Pattern.compile("sn --ollama search \"\\s*([^\\s\"].*[^\\s\"])\\s*\"");
+        Matcher ollamaSearchCommandMatcher = ollamaSearchCommandPattern.matcher(command);
+
+        if (ollamaSearchCommandMatcher.matches()) {
+            String searchParameter = ollamaSearchCommandMatcher.group(1);
+            String searchResult = noteManager.searchResultFromOllama(searchParameter);
+            LOGGER.logInfo(searchResult);
+
+            return true;
+        }
+        return false;
+    }
+
+    public boolean parseAddNoteFromOllamaSearchCommand(String command) {
+        Pattern addNoteFromOllamaSearchPattern = Pattern.compile("sn add --from-search \"([^\"]+)\"(?: --tag \"([^\"]+)\")?(?: \"([^\"]+)\")*");
+        Matcher addNoteFromOllamaSearchPatternMatcher = addNoteFromOllamaSearchPattern.matcher(command);
+
+        if (addNoteFromOllamaSearchPatternMatcher.matches()) {
+            String searchId = addNoteFromOllamaSearchPatternMatcher.group(1);
+            if (!searchId.matches("\\d+")) {
+                LOGGER.logInfo(MessagesContants.ErrorInvalidSearchID);
+                return true;
+            }
+            String noteTag = addNoteFromOllamaSearchPatternMatcher.group(2);
+            String noteContent = noteManager.findContentBySearchId(searchId);
+            if (noteContent == null) {
+                LOGGER.logInfo(MessagesContants.ErrorNoResultFound);
+                return true;
+            }
+            NoteFactory noteFactory = textNoteFactory;
+            Note note = noteFactory.createNote(noteContent, noteTag, null, null);
+
+            int id = noteManager.addNote(note);
+            LOGGER.logInfo(MessagesContants.NoteAddedSuccessufullyWithId + id);
+            return true;
+        }
+        return false;
     }
 
     public void displayHelp() {
@@ -655,6 +850,11 @@ public class CommandLineInterface {
         LOGGER.logInfo("- Pour lier des notes : sn link --id \"ID_de_la_note\" --tag \"tag1\" [and/or] \"tag2\" [...] --name \"Nom_de_lien\" [--at/--before/--after \"Date\"]\n");
         LOGGER.logInfo("- Pour Afficher les Liens des notes : sn show --link \"Nom_de_lien\"\n");
         LOGGER.logInfo("- Pour afficher toutes les notes : sn show notes");
+        LOGGER.logInfo("- Pour s'authentifier avec github : sn github auth \"token GitHub\" ");
+        LOGGER.logInfo("- Pour synchroniser les notes avec github : sn github push \"nom du fichier.pdf\" ");
+        LOGGER.logInfo("- Partager ses notes avec un collaborateur sur Github : sn github share \"repoName\" \"fileName\" \"collaborator\"@");
+        LOGGER.logInfo("- Pour effectuer une recherche avec Ollama: sn --ollama search \"term\"");
+        LOGGER.logInfo("- Pour ajouter une note à partir de l'ID du résultat de recherche Ollama : sn add --from-search \"Contenu de la note\" --tag \"Tag de la note\" --reminder \"Date et heure du rappel\"");
         LOGGER.logInfo("Pour quitter l'application : exit");
     }
 
