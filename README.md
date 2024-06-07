@@ -326,6 +326,43 @@ La version v1.1 de SuperNote propose les fonctionnalités suivantes :
 - **Tirer les Notes depuis GitHub :** permet de récupérer les notes d'un dépôt GitHub spécifié et de les importer dans SuperNotes.
   ```bash
    sn github pull "<nom_dépôt>" "<nom_fichier>"
+  ## Intégration de l'API Ollama
+
+# Intégration de l'API Ollama
+
+## Description
+
+SuperNote intègre désormais l'API Ollama pour permettre aux utilisateurs de rechercher des informations dynamiques directement depuis l'interface en ligne de commande. Cette fonctionnalité offre une méthode rapide et pratique pour obtenir des informations pertinentes sans quitter l'application, même en mode hors ligne.
+
+## Utilisation
+
+### Effectuer une Recherche
+
+Pour effectuer une recherche en utilisant l'API Ollama, utilisez la commande suivante :
+
+```bash
+sn --ollama search "terme de recherche"
+
+Les résultats de la recherche seront affichés dans un format lisible dans la console.
+Ajouter des Résultats de Recherche à une Note
+
+- Après avoir effectué une recherche, vous pouvez ajouter directement un résumé des résultats à une note en utilisant l'ID de la recherche :
+
+```bash
+sn add --from-search "ID_de_la_recherche"
+
+- Si la recherche ne dispose pas d'un ID, vous pouvez copier/coller les informations trouvées et les ajouter manuellement à une note :
+
+```bash
+sn add "Copier/COller le contenu selectionné"
+
+Gestion des Erreurs
+
+En cas de problèmes avec la recherche (par exemple, si aucun résultat n'est trouvé ou si la commande est mal formulée), des messages d'erreur clairs seront affichés pour vous guider.
+Fonctionnement Hors Ligne
+
+Cette fonctionnalité a été conçue pour fonctionner même sans connexion Internet, garantissant une disponibilité constante des recherches d'informations.
+
 
 ## Conteneurisation et Virtualisation
 Pour faciliter le déploiement et les environnements de développement, SuperNote prend en charge la conteneurisation et la virtualisation à l'aide de Docker et Vagrant.
